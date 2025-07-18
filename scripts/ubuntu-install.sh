@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Автоматизированная установка Nexus Node Manager на Ubuntu Server
-# Версия: 2024-01-21-v11 (заменен react-scripts на webpack для обхода проблем с ajv)
+# Версия: 2024-01-21-v12 (полностью удален react-scripts и TypeScript для обхода проблем с ajv)
 # Использование: bash ubuntu-install.sh
 #
 # ВАЖНО: Скрипт работает только с существующими пользователями!
