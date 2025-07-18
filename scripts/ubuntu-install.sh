@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Автоматизированная установка Nexus Node Manager на Ubuntu Server
-# Версия: 2024-01-21-v5 (убрана информационная страница, корневой адрес свободен)
+# Версия: 2024-01-21-v6 (исправлен поиск проекта в родительской папке)
 # Использование: bash ubuntu-install.sh
 #
 # ВАЖНО: Скрипт работает только с существующими пользователями!
@@ -180,7 +180,7 @@ fi
 
 print_header "Подготовка проекта"
 # Проверка что проект уже клонирован
-if [ ! -d "$(pwd)/nexus-node-manager" ] && [ ! -d "$(pwd)/nexus" ] && [ ! -d "/opt/nexus-node-manager" ]; then
+if [ ! -d "$(pwd)/nexus-node-manager" ] && [ ! -d "$(pwd)/nexus" ] && [ ! -d "/opt/nexus-node-manager" ] && [ ! -d "$(dirname $(pwd))/nexus-node-manager" ] && [ ! -d "$(dirname $(pwd))/nexus" ]; then
     print_error "Проект не найден. Клонируйте проект сначала:"
     print_info "git clone https://github.com/Sharkman96/nexus-manager.git nexus-node-manager"
     print_info "cd nexus-node-manager"
@@ -195,6 +195,10 @@ if [ -d "$(pwd)/nexus-node-manager" ]; then
     cp -r $(pwd)/nexus-node-manager/* /opt/nexus-node-manager/
 elif [ -d "$(pwd)/nexus" ]; then
     cp -r $(pwd)/nexus/* /opt/nexus-node-manager/
+elif [ -d "$(dirname $(pwd))/nexus-node-manager" ]; then
+    cp -r $(dirname $(pwd))/nexus-node-manager/* /opt/nexus-node-manager/
+elif [ -d "$(dirname $(pwd))/nexus" ]; then
+    cp -r $(dirname $(pwd))/nexus/* /opt/nexus-node-manager/
 elif [ -d "/opt/nexus-node-manager" ]; then
     print_info "Проект уже скопирован в /opt/nexus-node-manager"
 else
