@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.REACT_APP_API_URL || (
+  process.env.NODE_ENV === 'production' 
+    ? window.location.origin + '/nexus/api'
+    : 'http://localhost:3001/api'
+);
 
 // Создание экземпляра axios с базовой конфигурацией
 const api = axios.create({
@@ -148,7 +152,14 @@ export const formatters = {
 };
 
 // Функция для создания WebSocket соединения
-export const createWebSocket = (url = 'ws://localhost:3001') => {
+export const createWebSocket = (url) => {
+  if (!url) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    url = process.env.NODE_ENV === 'production' 
+      ? `${protocol}//${host}/nexus/ws`
+      : 'ws://localhost:3001';
+  }
   return new WebSocket(url);
 };
 

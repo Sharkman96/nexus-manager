@@ -93,6 +93,15 @@ Nexus Node Manager is a web application for managing Nexus prover nodes with rea
 
 **Detailed guide**: [INSTALLATION_EN.md](INSTALLATION_EN.md)
 
+## Application Access
+
+After installation, the management panel will be available at:
+- **Management Panel**: `http://SERVER_IP/nexus/`
+- **API**: `http://SERVER_IP/nexus/api/`
+- **Root Page**: `http://SERVER_IP/` (server information)
+
+This allows you to have other applications on the server at the root address.
+
 ## Project Management
 
 ### Service Management
@@ -248,6 +257,7 @@ This project is licensed under the MIT License.
 - [📦 Installation](scripts/ubuntu-install.sh) - Automated Ubuntu installation
 - [🔄 Setup](scripts/setup.sh) - Local development setup
 - [🗑️ Removal](scripts/remove.sh) - Complete project removal (`--help` for options)
+- [🔄 Migration](scripts/migrate-to-nexus-path.sh) - Migrate existing installations to `/nexus/` path
 
 ## Support
 

@@ -230,18 +230,40 @@ lsof -i :3001
 ### Health Checks
 
 ```bash
-# API health check
+# API health check (production)
+curl -I http://localhost/nexus/api/health
+
+# API health check (development)
 curl -I http://localhost:3001/api/health
 
-# WebSocket check
+# WebSocket check (production)
+curl -I http://localhost/nexus/ws
+
+# WebSocket check (development)
 curl -I http://localhost:3001/ws
 
 # Database check
 sqlite3 /opt/nexus-node-manager/database/nexus-nodes.db ".tables"
 
-# Frontend check (if using Nginx)
+# Frontend check (production)
+curl -I http://localhost/nexus/
+
+# Server info page
 curl -I http://localhost/
 ```
+
+### Application URLs
+
+**Production (after installation):**
+- Management Panel: `http://SERVER_IP/nexus/`
+- API: `http://SERVER_IP/nexus/api/`
+- WebSocket: `http://SERVER_IP/nexus/ws`
+- Server Info: `http://SERVER_IP/`
+
+**Development:**
+- Management Panel: `http://localhost:3000/`
+- API: `http://localhost:3001/api/`
+- WebSocket: `http://localhost:3001/ws`
 
 ## Troubleshooting
 

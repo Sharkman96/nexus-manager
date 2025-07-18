@@ -229,21 +229,40 @@ server {
     listen 80;
     server_name $SERVER_IP _;
     
-    root /opt/nexus-node-manager/frontend/build;
-    index index.html;
-    
-    # Gzip
-    gzip on;
-    gzip_types text/css application/javascript application/json;
-    
-    # Статические файлы
-    location /static/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
+    # Редирект с корня на информационную страницу
+    location = / {
+        return 200 '<html><body><h1>Server Status: OK</h1><p>Nexus Node Manager: <a href="/nexus/">Access Panel</a></p></body></html>';
+        add_header Content-Type text/html;
     }
     
-    # API
-    location /api/ {
+    # Редирект с /nexus на /nexus/
+    location = /nexus {
+        return 301 \$scheme://\$server_name/nexus/;
+    }
+    
+    # Nexus Node Manager приложение
+    location /nexus/ {
+        alias /opt/nexus-node-manager/frontend/build/;
+        index index.html;
+        
+        # Gzip
+        gzip on;
+        gzip_types text/css application/javascript application/json;
+        
+        # Статические файлы React
+        location /nexus/static/ {
+            alias /opt/nexus-node-manager/frontend/build/static/;
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+        
+        # React Router - все неизвестные пути направляем на index.html
+        try_files \$uri \$uri/ /nexus/index.html;
+    }
+    
+    # API endpoints
+    location /nexus/api/ {
+        rewrite ^/nexus/api/(.*) /api/\$1 break;
         proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
@@ -256,7 +275,8 @@ server {
     }
     
     # WebSocket
-    location /ws {
+    location /nexus/ws {
+        rewrite ^/nexus/ws(.*) /ws\$1 break;
         proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
@@ -265,11 +285,6 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-    
-    # React Router
-    location / {
-        try_files \$uri \$uri/ /index.html;
     }
     
     # Заголовки безопасности
@@ -362,8 +377,10 @@ else
 fi
 
 print_header "Установка завершена! 🎉"
-print_info "Приложение доступно по адресу: http://$SERVER_IP"
-print_info "API доступен по адресу: http://$SERVER_IP:3001"
+print_status "Nexus Node Manager успешно установлен"
+print_info "Панель управления: http://$SERVER_IP/nexus/"
+print_info "API доступен по адресу: http://$SERVER_IP/nexus/api/"
+print_info "Корневая страница: http://$SERVER_IP/ (информация о сервере)"
 print_info ""
 print_info "Полезные команды:"
 print_info "• Статус сервиса: systemctl status nexus-backend"
@@ -372,16 +389,22 @@ print_info "• Обновление: /opt/nexus-node-manager/update.sh"
 print_info "• Бэкап: /opt/nexus-node-manager/backup.sh"
 print_info ""
 print_info "Следующие шаги:"
-print_info "1. Откройте http://$SERVER_IP в браузере"
+print_info "1. Откройте http://$SERVER_IP/nexus/ в браузере"
 print_info "2. Зарегистрируйтесь на https://app.nexus.xyz"
 print_info "3. Получите Prover ID и добавьте узел"
 
 # Проверка доступности
 print_header "Тестирование доступности"
-if curl -s -o /dev/null -w "%{http_code}" "http://$SERVER_IP" | grep -q "200"; then
-    print_status "Сайт доступен по HTTP"
+if curl -s -o /dev/null -w "%{http_code}" "http://$SERVER_IP/" | grep -q "200"; then
+    print_status "Корневая страница доступна"
 else
-    print_warning "Сайт недоступен. Проверьте настройки Nginx"
+    print_warning "Корневая страница недоступна"
+fi
+
+if curl -s -o /dev/null -w "%{http_code}" "http://$SERVER_IP/nexus/" | grep -q "200"; then
+    print_status "Панель управления доступна по /nexus/"
+else
+    print_warning "Панель управления недоступна. Проверьте настройки Nginx"
 fi
 
 print_info "Установка завершена успешно!" 
