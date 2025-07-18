@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const webpack = require('webpack');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -44,7 +45,15 @@ module.exports = (env, argv) => {
     plugins: [
       new HtmlWebpackPlugin({
         template: './public/index.html',
-        filename: 'index.html'
+        filename: 'index.html',
+        templateParameters: {
+          PUBLIC_URL: '/nexus'
+        }
+      }),
+      new webpack.DefinePlugin({
+        'process.env.NODE_ENV': JSON.stringify(argv.mode),
+        'process.env.PUBLIC_URL': JSON.stringify('/nexus'),
+        'process.env.REACT_APP_API_URL': JSON.stringify(process.env.REACT_APP_API_URL || 'http://62.171.167.146/nexus/api')
       }),
       ...(isProduction ? [new MiniCssExtractPlugin({
         filename: 'static/css/[name].[contenthash:8].css'
