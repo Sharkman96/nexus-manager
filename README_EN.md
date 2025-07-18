@@ -145,11 +145,20 @@ tar -czf /opt/backups/nexus-manager-$(date +%Y%m%d_%H%M%S).tar.gz \
 ### Complete Removal
 
 ```bash
-# Automated removal
+# Interactive removal (with confirmations)
 chmod +x scripts/remove.sh
 ./scripts/remove.sh
 
-# Or manually:
+# Force removal (no confirmations)
+./scripts/remove.sh --force
+
+# Quick removal of main project folders only
+./scripts/remove.sh --quick
+
+# Or directly with command
+sudo rm -rf /opt/nexus-node-manager /opt/nexus-manager ~/nexus-node-manager ~/nexus-manager
+
+# Or complete manual removal:
 systemctl stop nexus-backend
 systemctl disable nexus-backend
 rm /etc/systemd/system/nexus-backend.service
@@ -238,7 +247,7 @@ This project is licensed under the MIT License.
 
 - [📦 Installation](scripts/ubuntu-install.sh) - Automated Ubuntu installation
 - [🔄 Setup](scripts/setup.sh) - Local development setup
-- [🗑️ Removal](scripts/remove.sh) - Complete project removal
+- [🗑️ Removal](scripts/remove.sh) - Complete project removal (`--help` for options)
 
 ## Support
 

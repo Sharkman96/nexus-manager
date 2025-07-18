@@ -388,7 +388,50 @@ apt autoclean
 rm -rf /var/log/nexus-*
 ```
 
-### Complete Removal Script
+### Automated Removal Script
+
+```bash
+# Show help
+./scripts/remove.sh --help
+
+# Interactive removal (with confirmations)
+./scripts/remove.sh
+
+# Force removal (no confirmations)
+./scripts/remove.sh --force
+
+# Quick removal (main folders only)
+./scripts/remove.sh --quick
+```
+
+### Quick Removal Command
+
+For a simple and fast removal of main project folders:
+
+```bash
+# Remove main project directories
+sudo rm -rf /opt/nexus-node-manager /opt/nexus-manager ~/nexus-node-manager ~/nexus-manager
+
+# Also clean up service and nginx (optional)
+sudo systemctl stop nexus-backend 2>/dev/null || true
+sudo systemctl disable nexus-backend 2>/dev/null || true
+sudo rm -f /etc/systemd/system/nexus-backend.service
+sudo rm -f /etc/nginx/sites-available/nexus-manager
+sudo rm -f /etc/nginx/sites-enabled/nexus-manager
+sudo systemctl daemon-reload
+sudo systemctl restart nginx 2>/dev/null || true
+```
+
+The automated removal script will:
+- Stop and disable the nexus-backend service
+- Remove nginx configuration
+- Remove project files from `/opt/nexus-node-manager`
+- Find and remove local copies of the project
+- Remove firewall rules
+- Optionally remove backup files
+- Clean up any remaining processes
+
+### Manual Complete Removal Script
 
 ```bash
 #!/bin/bash
