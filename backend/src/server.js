@@ -86,6 +86,9 @@ class NexusNodeManager {
   setupExpress() {
     console.log('⚙️  Setting up Express middleware...');
     
+    // Trust proxy для работы за Nginx
+    this.app.set('trust proxy', 1);
+    
     // Базовое middleware
     this.app.use(helmet());
     this.app.use(cors({
@@ -132,6 +135,23 @@ class NexusNodeManager {
     this.app.use('/api/metrics', metricsRoutes);
     this.app.use('/api/system', systemRoutes);
     this.app.use('/api/notifications', notificationRoutes);
+    
+    // Базовый API роут
+    this.app.get('/api/', (req, res) => {
+      res.json({
+        message: 'Nexus Node Manager API',
+        version: '1.0.0',
+        status: 'running',
+        endpoints: {
+          nodes: '/api/nodes',
+          metrics: '/api/metrics',
+          system: '/api/system',
+          notifications: '/api/notifications',
+          health: '/health'
+        },
+        timestamp: new Date().toISOString()
+      });
+    });
     
     // Базовые роуты
     this.app.get('/', (req, res) => {

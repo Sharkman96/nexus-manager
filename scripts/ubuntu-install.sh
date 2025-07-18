@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Автоматизированная установка Nexus Node Manager на Ubuntu Server
-# Версия: 2024-01-21-v15 (изменен порт по умолчанию на 3002 для избежания конфликтов)
+# Версия: 2024-01-21-v16 (исправлен путь frontend и добавлен trust proxy)
 # Использование: bash ubuntu-install.sh
 #
 # ВАЖНО: Скрипт работает только с существующими пользователями!
@@ -213,7 +213,11 @@ print_status "Backend зависимости установлены"
 
 # Frontend
 cd /opt/nexus-node-manager/frontend && rm -rf node_modules package-lock.json && npm install --legacy-peer-deps --force && npm run build
-print_status "Frontend собран"
+# Копирование frontend файлов
+cp -r /opt/nexus-node-manager/frontend/build/* /var/www/nexus-manager/
+chown -R www-data:www-data /var/www/nexus-manager/
+chmod -R 755 /var/www/nexus-manager/
+print_status "Frontend собран и скопирован"
 
 print_header "Настройка конфигурации"
 # Создание .env файла
@@ -238,6 +242,7 @@ EOF
 mkdir -p /opt/nexus-node-manager/backend/logs
 mkdir -p /opt/nexus-node-manager/database
 mkdir -p /opt/backups/nexus-manager
+mkdir -p /var/www/nexus-manager
 
 print_header "Инициализация базы данных"
 cd /opt/nexus-node-manager/backend && npm run db:migrate
@@ -285,7 +290,7 @@ server {
     
     # Nexus Node Manager приложение
     location /nexus/ {
-        alias /opt/nexus-node-manager/frontend/build/;
+        alias /var/www/nexus-manager/;
         index index.html;
         
         # Gzip
@@ -294,7 +299,7 @@ server {
         
         # Статические файлы React
         location /nexus/static/ {
-            alias /opt/nexus-node-manager/frontend/build/static/;
+            alias /var/www/nexus-manager/static/;
             expires 1y;
             add_header Cache-Control "public, immutable";
         }
