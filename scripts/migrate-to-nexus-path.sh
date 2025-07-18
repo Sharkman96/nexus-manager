@@ -88,7 +88,7 @@ cd backend && npm install --production
 print_status "Backend зависимости обновлены"
 
 # Frontend
-cd ../frontend && npm install --legacy-peer-deps && npm run build
+cd ../frontend && rm -rf node_modules package-lock.json && npm install --legacy-peer-deps && npm run build
 print_status "Frontend пересобран с новыми настройками"
 
 print_header "Обновление конфигурации Nginx"

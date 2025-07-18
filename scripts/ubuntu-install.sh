@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Автоматизированная установка Nexus Node Manager на Ubuntu Server
-# Версия: 2024-01-21-v7 (исправлены зависимости Tailwind CSS)
+# Версия: 2024-01-21-v8 (исправлены конфликты зависимостей ajv)
 # Использование: bash ubuntu-install.sh
 #
 # ВАЖНО: Скрипт работает только с существующими пользователями!
@@ -212,7 +212,7 @@ cd /opt/nexus-node-manager/backend && npm install --production
 print_status "Backend зависимости установлены"
 
 # Frontend
-cd /opt/nexus-node-manager/frontend && npm install --legacy-peer-deps && npm run build
+cd /opt/nexus-node-manager/frontend && rm -rf node_modules package-lock.json && npm install --legacy-peer-deps && npm run build
 print_status "Frontend собран"
 
 print_header "Настройка конфигурации"
@@ -361,7 +361,7 @@ systemctl stop nexus-backend
 cd /opt/nexus-node-manager
 git pull origin main
 cd backend && npm install --production
-cd ../frontend && npm install --legacy-peer-deps && npm run build
+cd ../frontend && rm -rf node_modules package-lock.json && npm install --legacy-peer-deps && npm run build
 cd ../backend && npm run db:migrate
 systemctl start nexus-backend
 echo "✅ Обновление завершено!"
