@@ -44,7 +44,7 @@ echo ""
 
 # Проверка версии скрипта установки
 if [ -f "scripts/ubuntu-install.sh" ]; then
-    if grep -q "Версия: 2024-01-21-v13" scripts/ubuntu-install.sh; then
+    if grep -q "Версия: 2024-01-21-v14" scripts/ubuntu-install.sh; then
         echo "✅ Скрипт установки имеет правильную версию"
     else
         echo "❌ Скрипт установки имеет старую версию"

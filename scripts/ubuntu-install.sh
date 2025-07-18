@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Автоматизированная установка Nexus Node Manager на Ubuntu Server
-# Версия: 2024-01-21-v13 (добавлены недостающие webpack зависимости)
+# Версия: 2024-01-21-v14 (исправлен путь к server.js для systemd)
 # Использование: bash ubuntu-install.sh
 #
 # ВАЖНО: Скрипт работает только с существующими пользователями!
@@ -252,7 +252,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/nexus-node-manager/backend
-ExecStart=/usr/bin/node src/server.js
+ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
