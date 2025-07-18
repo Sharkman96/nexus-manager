@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Автоматизированная установка Nexus Node Manager на Ubuntu Server
-# Версия: 2024-01-21-v14 (исправлен путь к server.js для systemd)
+# Версия: 2024-01-21-v15 (изменен порт по умолчанию на 3002 для избежания конфликтов)
 # Использование: bash ubuntu-install.sh
 #
 # ВАЖНО: Скрипт работает только с существующими пользователями!
@@ -218,7 +218,7 @@ print_status "Frontend собран"
 print_header "Настройка конфигурации"
 # Создание .env файла
 tee /opt/nexus-node-manager/backend/.env > /dev/null <<EOF
-PORT=3001
+PORT=3002
 NODE_ENV=production
 DB_PATH=./database/nexus-nodes.db
 NEXUS_RPC_URL=https://rpc.nexus.xyz/http
@@ -306,7 +306,7 @@ server {
     # API endpoints
     location /nexus/api/ {
         rewrite ^/nexus/api/(.*) /api/\$1 break;
-        proxy_pass http://localhost:3001;
+        proxy_pass http://localhost:3002;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -320,7 +320,7 @@ server {
     # WebSocket
     location /nexus/ws {
         rewrite ^/nexus/ws(.*) /ws\$1 break;
-        proxy_pass http://localhost:3001;
+        proxy_pass http://localhost:3002;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -348,7 +348,7 @@ print_header "Настройка Firewall"
 run_cmd ufw --force enable
 run_cmd ufw allow ssh
 run_cmd ufw allow 'Nginx HTTP'
-run_cmd ufw allow 3001
+run_cmd ufw allow 3002
 print_status "Firewall настроен"
 
 print_header "Создание скриптов управления"
