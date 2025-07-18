@@ -33,8 +33,8 @@ chmod +x scripts/ubuntu-install.sh
 ./scripts/ubuntu-install.sh
 
 # Следуйте инструкциям установщика
-# Введите домен и email для SSL
-# Приложение будет доступно по https://yourdomain.com
+# Выберите дополнительные опции (Nexus CLI, автообновления)
+# Приложение будет доступно по http://SERVER_IP
 ```
 
 ## Первые шаги

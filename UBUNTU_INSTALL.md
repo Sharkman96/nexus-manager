@@ -1,5 +1,7 @@
 # Установка Nexus Node Manager на Ubuntu Server
 
+> **⚠️ ВАЖНО**: Рекомендуется использовать **автоматический скрипт установки** `./scripts/ubuntu-install.sh`, который упрощен и не требует настройки SSL/доменов. Данная инструкция предназначена для ручной установки и может быть устаревшей.
+
 Полное руководство по установке и настройке Nexus Node Manager на Ubuntu сервер для production использования.
 
 ## Системные требования
@@ -161,7 +163,7 @@ METRICS_UPDATE_INTERVAL=30000
 PERFORMANCE_HISTORY_DAYS=30
 
 # Security
-CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
+CORS_ORIGINS=http://localhost:3000,http://SERVER_IP
 RATE_LIMIT_WINDOW=15
 RATE_LIMIT_MAX_REQUESTS=100
 

@@ -76,17 +76,14 @@ fi
 # Интерактивная настройка
 print_header "Настройка параметров"
 
-read -p "Домен для приложения (например, nexus.example.com): " DOMAIN
-if [ -z "$DOMAIN" ]; then
-    print_error "Домен обязателен для настройки SSL"
-    exit 1
+# Получение IP адреса сервера
+SERVER_IP=$(ip route get 1.1.1.1 | awk '{print $7}' | head -1)
+if [ -z "$SERVER_IP" ]; then
+    SERVER_IP="localhost"
 fi
 
-read -p "Электронная почта для Let's Encrypt: " EMAIL
-if [ -z "$EMAIL" ]; then
-    print_error "Email обязателен для Let's Encrypt"
-    exit 1
-fi
+print_info "Сервер будет доступен по адресу: http://$SERVER_IP:3000"
+print_info "Панель управления: http://$SERVER_IP"
 
 read -p "Установить Nexus CLI? (y/n): " -n 1 -r INSTALL_NEXUS_CLI
 echo
@@ -100,7 +97,7 @@ print_status "Система обновлена"
 
 print_header "Установка базовых пакетов"
 run_cmd apt install -y curl wget git build-essential software-properties-common \
-    ufw nginx certbot python3-certbot-nginx htop unzip
+    ufw nginx htop unzip
 print_status "Базовые пакеты установлены"
 
 print_header "Установка Node.js 18.x"
@@ -181,7 +178,7 @@ NEXUS_EXPLORER_API=https://explorer.nexus.xyz/api/v1
 NEXUS_CLI_PATH=/home/nexus/.cargo/bin/nexus-cli
 METRICS_UPDATE_INTERVAL=30000
 PERFORMANCE_HISTORY_DAYS=30
-CORS_ORIGINS=https://$DOMAIN
+CORS_ORIGINS=http://$SERVER_IP
 RATE_LIMIT_WINDOW=15
 RATE_LIMIT_MAX_REQUESTS=100
 LOG_LEVEL=info
@@ -231,15 +228,7 @@ print_header "Настройка Nginx"
 run_cmd tee /etc/nginx/sites-available/nexus-manager > /dev/null <<EOF
 server {
     listen 80;
-    server_name $DOMAIN;
-    return 301 https://\$server_name\$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name $DOMAIN;
-    
-    # SSL будет настроен certbot
+    server_name $SERVER_IP _;
     
     root /opt/nexus-node-manager/frontend/build;
     index index.html;
@@ -298,19 +287,11 @@ run_cmd rm -f /etc/nginx/sites-enabled/default
 run_cmd nginx -t && run_cmd systemctl restart nginx
 print_status "Nginx настроен"
 
-print_header "Настройка SSL сертификата"
-# Получение SSL сертификата
-run_cmd certbot --nginx -d $DOMAIN --email $EMAIL --agree-tos --non-interactive
-
-# Автоматическое обновление
-run_cmd systemctl enable certbot.timer
-run_cmd systemctl start certbot.timer
-print_status "SSL сертификат получен и настроено автообновление"
-
 print_header "Настройка Firewall"
 run_cmd ufw --force enable
 run_cmd ufw allow ssh
-run_cmd ufw allow 'Nginx Full'
+run_cmd ufw allow 'Nginx HTTP'
+run_cmd ufw allow 3001
 print_status "Firewall настроен"
 
 print_header "Создание скриптов управления"
@@ -382,7 +363,8 @@ else
 fi
 
 print_header "Установка завершена! 🎉"
-print_info "Приложение доступно по адресу: https://$DOMAIN"
+print_info "Приложение доступно по адресу: http://$SERVER_IP"
+print_info "API доступен по адресу: http://$SERVER_IP:3001"
 print_info ""
 print_info "Полезные команды:"
 print_info "• Статус сервиса: systemctl status nexus-backend"
@@ -391,18 +373,16 @@ print_info "• Обновление: /opt/nexus-node-manager/update.sh"
 print_info "• Бэкап: /opt/nexus-node-manager/backup.sh"
 print_info ""
 print_info "Следующие шаги:"
-print_info "1. Откройте https://$DOMAIN в браузере"
+print_info "1. Откройте http://$SERVER_IP в браузере"
 print_info "2. Зарегистрируйтесь на https://app.nexus.xyz"
 print_info "3. Получите Prover ID и добавьте узел"
-print_info ""
-print_warning "Не забудьте настроить DNS для домена $DOMAIN"
 
 # Проверка доступности
 print_header "Тестирование доступности"
-if curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN" | grep -q "200"; then
-    print_status "Сайт доступен по HTTPS"
+if curl -s -o /dev/null -w "%{http_code}" "http://$SERVER_IP" | grep -q "200"; then
+    print_status "Сайт доступен по HTTP"
 else
-    print_warning "Сайт недоступен. Проверьте DNS и настройки"
+    print_warning "Сайт недоступен. Проверьте настройки Nginx"
 fi
 
 print_info "Установка завершена успешно!" 
