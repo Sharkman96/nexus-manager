@@ -1,0 +1,396 @@
+#!/bin/bash
+
+# Автоматизированная установка Nexus Node Manager на Ubuntu Server
+# Использование: sudo bash ubuntu-install.sh
+
+set -e
+
+# Цвета для вывода
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Функции для цветного вывода
+print_status() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ️  $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+print_header() {
+    echo -e "\n${BLUE}==== $1 ====${NC}"
+}
+
+# Проверка прав root
+if [[ $EUID -ne 0 ]]; then
+   print_error "Этот скрипт должен быть запущен с правами root (sudo)"
+   exit 1
+fi
+
+# Получение пользователя, который запустил sudo
+REAL_USER=${SUDO_USER:-$(whoami)}
+if [ "$REAL_USER" = "root" ]; then
+    print_error "Не запускайте скрипт напрямую под root. Используйте sudo."
+    exit 1
+fi
+
+print_header "Установка Nexus Node Manager на Ubuntu Server"
+print_info "Пользователь: $REAL_USER"
+print_info "Система: $(lsb_release -d | cut -f2)"
+
+# Проверка версии Ubuntu
+UBUNTU_VERSION=$(lsb_release -rs)
+if ! echo "$UBUNTU_VERSION" | grep -E "^(20|22|24)\." > /dev/null; then
+    print_warning "Тестировалось на Ubuntu 20.04+. Ваша версия: $UBUNTU_VERSION"
+    read -p "Продолжить? (y/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
+
+# Интерактивная настройка
+print_header "Настройка параметров"
+
+read -p "Домен для приложения (например, nexus.example.com): " DOMAIN
+if [ -z "$DOMAIN" ]; then
+    print_error "Домен обязателен для настройки SSL"
+    exit 1
+fi
+
+read -p "Электронная почта для Let's Encrypt: " EMAIL
+if [ -z "$EMAIL" ]; then
+    print_error "Email обязателен для Let's Encrypt"
+    exit 1
+fi
+
+read -p "Установить Nexus CLI? (y/n): " -n 1 -r INSTALL_NEXUS_CLI
+echo
+
+read -p "Настроить автоматические обновления? (y/n): " -n 1 -r SETUP_AUTO_UPDATES
+echo
+
+print_header "Обновление системы"
+apt update && apt upgrade -y
+print_status "Система обновлена"
+
+print_header "Установка базовых пакетов"
+apt install -y curl wget git build-essential software-properties-common \
+    ufw nginx certbot python3-certbot-nginx htop unzip
+print_status "Базовые пакеты установлены"
+
+print_header "Установка Node.js 18.x"
+curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+apt install -y nodejs
+print_status "Node.js установлен: $(node --version)"
+
+print_header "Установка Docker"
+# Удаление старых версий
+apt remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
+
+# Установка Docker
+apt install -y ca-certificates curl gnupg lsb-release
+mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+apt update
+apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+usermod -aG docker $REAL_USER
+systemctl enable docker
+systemctl start docker
+print_status "Docker установлен и настроен"
+
+print_header "Установка дополнительных зависимостей"
+apt install -y cmake
+print_status "CMake установлен: $(cmake --version | head -1)"
+
+# Установка Rust для пользователя
+if [[ $INSTALL_NEXUS_CLI =~ ^[Yy]$ ]]; then
+    print_header "Установка Rust и Nexus CLI"
+    sudo -u $REAL_USER bash -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
+    sudo -u $REAL_USER bash -c 'source ~/.cargo/env && rustc --version'
+    
+    # Установка Nexus CLI
+    sudo -u $REAL_USER bash -c 'curl https://cli.nexus.xyz/ | sh'
+    print_status "Nexus CLI установлен"
+fi
+
+print_header "Создание пользователя для приложения"
+# Создание пользователя nexus
+if ! id nexus &>/dev/null; then
+    adduser --system --group --home /opt/nexus-node-manager nexus
+    print_status "Пользователь nexus создан"
+else
+    print_info "Пользователь nexus уже существует"
+fi
+
+# Клонирование проекта
+print_header "Клонирование проекта"
+if [ ! -d "/home/$REAL_USER/nexus-node-manager" ]; then
+    print_info "Клонируйте проект в /home/$REAL_USER/nexus-node-manager"
+    print_info "Затем запустите скрипт снова"
+    exit 1
+fi
+
+# Копирование файлов
+cp -r /home/$REAL_USER/nexus-node-manager/* /opt/nexus-node-manager/
+chown -R nexus:nexus /opt/nexus-node-manager
+
+print_header "Установка зависимостей"
+# Backend
+sudo -u nexus bash -c "cd /opt/nexus-node-manager/backend && npm install --production"
+print_status "Backend зависимости установлены"
+
+# Frontend
+sudo -u nexus bash -c "cd /opt/nexus-node-manager/frontend && npm install && npm run build"
+print_status "Frontend собран"
+
+print_header "Настройка конфигурации"
+# Создание .env файла
+sudo -u nexus tee /opt/nexus-node-manager/backend/.env > /dev/null <<EOF
+PORT=3001
+NODE_ENV=production
+DB_PATH=./database/nexus-nodes.db
+NEXUS_RPC_URL=https://rpc.nexus.xyz/http
+NEXUS_WS_URL=wss://rpc.nexus.xyz/ws
+NEXUS_EXPLORER_API=https://explorer.nexus.xyz/api/v1
+NEXUS_CLI_PATH=/home/nexus/.cargo/bin/nexus-cli
+METRICS_UPDATE_INTERVAL=30000
+PERFORMANCE_HISTORY_DAYS=30
+CORS_ORIGINS=https://$DOMAIN
+RATE_LIMIT_WINDOW=15
+RATE_LIMIT_MAX_REQUESTS=100
+LOG_LEVEL=info
+LOG_FILE=./logs/nexus-manager.log
+EOF
+
+# Создание директорий
+sudo -u nexus mkdir -p /opt/nexus-node-manager/backend/logs
+sudo -u nexus mkdir -p /opt/nexus-node-manager/database
+sudo -u nexus mkdir -p /opt/backups/nexus-manager
+
+print_header "Инициализация базы данных"
+sudo -u nexus bash -c "cd /opt/nexus-node-manager/backend && npm run db:migrate"
+print_status "База данных инициализирована"
+
+print_header "Создание systemd сервиса"
+tee /etc/systemd/system/nexus-backend.service > /dev/null <<EOF
+[Unit]
+Description=Nexus Node Manager Backend
+After=network.target
+
+[Service]
+Type=simple
+User=nexus
+WorkingDirectory=/opt/nexus-node-manager/backend
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nexus-backend
+LimitNOFILE=65535
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable nexus-backend
+systemctl start nexus-backend
+print_status "Сервис создан и запущен"
+
+print_header "Настройка Nginx"
+# Создание конфигурации Nginx
+tee /etc/nginx/sites-available/nexus-manager > /dev/null <<EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+    return 301 https://\$server_name\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name $DOMAIN;
+    
+    # SSL будет настроен certbot
+    
+    root /opt/nexus-node-manager/frontend/build;
+    index index.html;
+    
+    # Gzip
+    gzip on;
+    gzip_types text/css application/javascript application/json;
+    
+    # Статические файлы
+    location /static/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # API
+    location /api/ {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+    }
+    
+    # WebSocket
+    location /ws {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+    
+    # React Router
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+    
+    # Заголовки безопасности
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+    add_header X-XSS-Protection "1; mode=block";
+    add_header Referrer-Policy "strict-origin-when-cross-origin";
+}
+EOF
+
+# Активация сайта
+ln -sf /etc/nginx/sites-available/nexus-manager /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl restart nginx
+print_status "Nginx настроен"
+
+print_header "Настройка SSL сертификата"
+# Получение SSL сертификата
+certbot --nginx -d $DOMAIN --email $EMAIL --agree-tos --non-interactive
+
+# Автоматическое обновление
+systemctl enable certbot.timer
+systemctl start certbot.timer
+print_status "SSL сертификат получен и настроено автообновление"
+
+print_header "Настройка Firewall"
+ufw --force enable
+ufw allow ssh
+ufw allow 'Nginx Full'
+print_status "Firewall настроен"
+
+print_header "Создание скриптов управления"
+# Скрипт обновления
+tee /opt/nexus-node-manager/update.sh > /dev/null <<'EOF'
+#!/bin/bash
+set -e
+echo "🔄 Обновление Nexus Node Manager..."
+systemctl stop nexus-backend
+cd /opt/nexus-node-manager
+sudo -u nexus git pull origin main
+sudo -u nexus bash -c "cd backend && npm install --production"
+sudo -u nexus bash -c "cd frontend && npm install && npm run build"
+sudo -u nexus bash -c "cd backend && npm run db:migrate"
+systemctl start nexus-backend
+echo "✅ Обновление завершено!"
+EOF
+
+# Скрипт бэкапа
+tee /opt/nexus-node-manager/backup.sh > /dev/null <<'EOF'
+#!/bin/bash
+BACKUP_DIR="/opt/backups/nexus-manager"
+DATE=$(date +%Y%m%d_%H%M%S)
+mkdir -p $BACKUP_DIR
+cp /opt/nexus-node-manager/database/nexus-nodes.db $BACKUP_DIR/nexus-nodes_$DATE.db
+cp /opt/nexus-node-manager/backend/.env $BACKUP_DIR/env_$DATE
+find $BACKUP_DIR -name "*.db" -mtime +7 -delete
+find $BACKUP_DIR -name "env_*" -mtime +7 -delete
+echo "✅ Бэкап создан: $BACKUP_DIR"
+EOF
+
+chmod +x /opt/nexus-node-manager/update.sh
+chmod +x /opt/nexus-node-manager/backup.sh
+
+# Настройка cron для бэкапов
+(crontab -l 2>/dev/null; echo "0 2 * * * /opt/nexus-node-manager/backup.sh") | crontab -
+
+print_status "Скрипты управления созданы"
+
+# Автоматические обновления
+if [[ $SETUP_AUTO_UPDATES =~ ^[Yy]$ ]]; then
+    print_header "Настройка автоматических обновлений"
+    apt install -y unattended-upgrades
+    dpkg-reconfigure -plow unattended-upgrades
+    print_status "Автоматические обновления настроены"
+fi
+
+print_header "Проверка установки"
+# Проверка статуса сервиса
+if systemctl is-active --quiet nexus-backend; then
+    print_status "Сервис запущен"
+else
+    print_error "Сервис не запущен"
+    systemctl status nexus-backend
+fi
+
+# Проверка портов
+if netstat -tlpn | grep -q ":3001"; then
+    print_status "API сервер слушает порт 3001"
+else
+    print_warning "API сервер не слушает порт 3001"
+fi
+
+# Проверка Nginx
+if systemctl is-active --quiet nginx; then
+    print_status "Nginx запущен"
+else
+    print_error "Nginx не запущен"
+fi
+
+print_header "Установка завершена! 🎉"
+print_info "Приложение доступно по адресу: https://$DOMAIN"
+print_info ""
+print_info "Полезные команды:"
+print_info "• Статус сервиса: systemctl status nexus-backend"
+print_info "• Просмотр логов: journalctl -u nexus-backend -f"
+print_info "• Обновление: /opt/nexus-node-manager/update.sh"
+print_info "• Бэкап: /opt/nexus-node-manager/backup.sh"
+print_info ""
+print_info "Следующие шаги:"
+print_info "1. Откройте https://$DOMAIN в браузере"
+print_info "2. Зарегистрируйтесь на https://app.nexus.xyz"
+print_info "3. Получите Prover ID и добавьте узел"
+print_info ""
+print_warning "Не забудьте настроить DNS для домена $DOMAIN"
+
+# Проверка доступности
+print_header "Тестирование доступности"
+if curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN" | grep -q "200"; then
+    print_status "Сайт доступен по HTTPS"
+else
+    print_warning "Сайт недоступен. Проверьте DNS и настройки"
+fi
+
+print_info "Установка завершена успешно!" 
