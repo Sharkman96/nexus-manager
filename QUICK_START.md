@@ -30,7 +30,7 @@ cd nexus-node-manager
 
 # Автоматическая установка
 chmod +x scripts/ubuntu-install.sh
-sudo ./scripts/ubuntu-install.sh
+./scripts/ubuntu-install.sh
 
 # Следуйте инструкциям установщика
 # Введите домен и email для SSL

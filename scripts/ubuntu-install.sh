@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Автоматизированная установка Nexus Node Manager на Ubuntu Server
-# Использование: sudo bash ubuntu-install.sh
+# Использование: bash ubuntu-install.sh
 
 set -e
 
@@ -33,17 +33,29 @@ print_header() {
     echo -e "\n${BLUE}==== $1 ====${NC}"
 }
 
-# Проверка прав root
-if [[ $EUID -ne 0 ]]; then
-   print_error "Этот скрипт должен быть запущен с правами root (sudo)"
-   exit 1
-fi
+# Функция для выполнения команд с sudo при необходимости
+run_cmd() {
+    if [[ $EUID -eq 0 ]]; then
+        # Если запущен под root, выполняем команду напрямую
+        "$@"
+    else
+        # Если не под root, используем sudo
+        sudo "$@"
+    fi
+}
 
-# Получение пользователя, который запустил sudo
+# Определение пользователя
 REAL_USER=${SUDO_USER:-$(whoami)}
 if [ "$REAL_USER" = "root" ]; then
-    print_error "Не запускайте скрипт напрямую под root. Используйте sudo."
-    exit 1
+    REAL_USER="nexus"
+fi
+
+# Информация о пользователе
+if [[ $EUID -eq 0 ]]; then
+    print_info "Запуск с правами root"
+else
+    print_info "Запуск под пользователем: $REAL_USER"
+    print_warning "Для некоторых операций может потребоваться sudo"
 fi
 
 print_header "Установка Nexus Node Manager на Ubuntu Server"
@@ -83,37 +95,37 @@ read -p "Настроить автоматические обновления? (
 echo
 
 print_header "Обновление системы"
-apt update && apt upgrade -y
+run_cmd apt update && run_cmd apt upgrade -y
 print_status "Система обновлена"
 
 print_header "Установка базовых пакетов"
-apt install -y curl wget git build-essential software-properties-common \
+run_cmd apt install -y curl wget git build-essential software-properties-common \
     ufw nginx certbot python3-certbot-nginx htop unzip
 print_status "Базовые пакеты установлены"
 
 print_header "Установка Node.js 18.x"
-curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-apt install -y nodejs
+curl -fsSL https://deb.nodesource.com/setup_18.x | run_cmd bash -
+run_cmd apt install -y nodejs
 print_status "Node.js установлен: $(node --version)"
 
 print_header "Установка Docker"
 # Удаление старых версий
-apt remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
+run_cmd apt remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
 
 # Установка Docker
-apt install -y ca-certificates curl gnupg lsb-release
-mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-apt update
-apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-usermod -aG docker $REAL_USER
-systemctl enable docker
-systemctl start docker
+run_cmd apt install -y ca-certificates curl gnupg lsb-release
+run_cmd mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | run_cmd gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | run_cmd tee /etc/apt/sources.list.d/docker.list > /dev/null
+run_cmd apt update
+run_cmd apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+run_cmd usermod -aG docker $REAL_USER
+run_cmd systemctl enable docker
+run_cmd systemctl start docker
 print_status "Docker установлен и настроен"
 
 print_header "Установка дополнительных зависимостей"
-apt install -y cmake
+run_cmd apt install -y cmake
 print_status "CMake установлен: $(cmake --version | head -1)"
 
 # Установка Rust для пользователя
@@ -209,14 +221,14 @@ MemoryMax=2G
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable nexus-backend
-systemctl start nexus-backend
+run_cmd systemctl daemon-reload
+run_cmd systemctl enable nexus-backend
+run_cmd systemctl start nexus-backend
 print_status "Сервис создан и запущен"
 
 print_header "Настройка Nginx"
 # Создание конфигурации Nginx
-tee /etc/nginx/sites-available/nexus-manager > /dev/null <<EOF
+run_cmd tee /etc/nginx/sites-available/nexus-manager > /dev/null <<EOF
 server {
     listen 80;
     server_name $DOMAIN;
@@ -281,24 +293,24 @@ server {
 EOF
 
 # Активация сайта
-ln -sf /etc/nginx/sites-available/nexus-manager /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl restart nginx
+run_cmd ln -sf /etc/nginx/sites-available/nexus-manager /etc/nginx/sites-enabled/
+run_cmd rm -f /etc/nginx/sites-enabled/default
+run_cmd nginx -t && run_cmd systemctl restart nginx
 print_status "Nginx настроен"
 
 print_header "Настройка SSL сертификата"
 # Получение SSL сертификата
-certbot --nginx -d $DOMAIN --email $EMAIL --agree-tos --non-interactive
+run_cmd certbot --nginx -d $DOMAIN --email $EMAIL --agree-tos --non-interactive
 
 # Автоматическое обновление
-systemctl enable certbot.timer
-systemctl start certbot.timer
+run_cmd systemctl enable certbot.timer
+run_cmd systemctl start certbot.timer
 print_status "SSL сертификат получен и настроено автообновление"
 
 print_header "Настройка Firewall"
-ufw --force enable
-ufw allow ssh
-ufw allow 'Nginx Full'
+run_cmd ufw --force enable
+run_cmd ufw allow ssh
+run_cmd ufw allow 'Nginx Full'
 print_status "Firewall настроен"
 
 print_header "Создание скриптов управления"
@@ -307,13 +319,13 @@ tee /opt/nexus-node-manager/update.sh > /dev/null <<'EOF'
 #!/bin/bash
 set -e
 echo "🔄 Обновление Nexus Node Manager..."
-systemctl stop nexus-backend
+run_cmd systemctl stop nexus-backend
 cd /opt/nexus-node-manager
 sudo -u nexus git pull origin main
 sudo -u nexus bash -c "cd backend && npm install --production"
 sudo -u nexus bash -c "cd frontend && npm install && npm run build"
 sudo -u nexus bash -c "cd backend && npm run db:migrate"
-systemctl start nexus-backend
+run_cmd systemctl start nexus-backend
 echo "✅ Обновление завершено!"
 EOF
 
@@ -348,11 +360,11 @@ fi
 
 print_header "Проверка установки"
 # Проверка статуса сервиса
-if systemctl is-active --quiet nexus-backend; then
+if run_cmd systemctl is-active --quiet nexus-backend; then
     print_status "Сервис запущен"
 else
     print_error "Сервис не запущен"
-    systemctl status nexus-backend
+    run_cmd systemctl status nexus-backend
 fi
 
 # Проверка портов
@@ -363,7 +375,7 @@ else
 fi
 
 # Проверка Nginx
-if systemctl is-active --quiet nginx; then
+if run_cmd systemctl is-active --quiet nginx; then
     print_status "Nginx запущен"
 else
     print_error "Nginx не запущен"

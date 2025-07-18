@@ -76,7 +76,7 @@ nexus/
 2. Запустите автоматизированный скрипт:
    ```bash
    chmod +x scripts/ubuntu-install.sh
-   sudo ./scripts/ubuntu-install.sh
+   ./scripts/ubuntu-install.sh
    ```
 
 3. Следуйте инструкциям установщика:
