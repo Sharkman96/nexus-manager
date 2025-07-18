@@ -136,39 +136,39 @@ if [[ $INSTALL_NEXUS_CLI =~ ^[Yy]$ ]]; then
     print_status "Nexus CLI установлен"
 fi
 
-print_header "Создание пользователя для приложения"
-# Создание пользователя nexus
-if ! id nexus &>/dev/null; then
-    adduser --system --group --home /opt/nexus-node-manager nexus
-    print_status "Пользователь nexus создан"
-else
-    print_info "Пользователь nexus уже существует"
-fi
-
-# Клонирование проекта
-print_header "Клонирование проекта"
-if [ ! -d "/home/$REAL_USER/nexus-node-manager" ]; then
-    print_info "Клонируйте проект в /home/$REAL_USER/nexus-node-manager"
+print_header "Подготовка проекта"
+# Проверка что проект уже клонирован
+if [ ! -d "$(pwd)/nexus-node-manager" ] && [ ! -d "/opt/nexus-node-manager" ]; then
+    print_error "Проект не найден. Клонируйте проект сначала:"
+    print_info "git clone https://github.com/Sharkman96/nexus-manager.git nexus-node-manager"
+    print_info "cd nexus-node-manager"
     print_info "Затем запустите скрипт снова"
     exit 1
 fi
 
-# Копирование файлов
-cp -r /home/$REAL_USER/nexus-node-manager/* /opt/nexus-node-manager/
-chown -R nexus:nexus /opt/nexus-node-manager
+# Копирование файлов в /opt
+run_cmd mkdir -p /opt/nexus-node-manager
+if [ -d "$(pwd)/nexus-node-manager" ]; then
+    cp -r $(pwd)/nexus-node-manager/* /opt/nexus-node-manager/
+elif [ -d "/opt/nexus-node-manager" ]; then
+    print_info "Проект уже скопирован в /opt/nexus-node-manager"
+else
+    print_error "Не найдена папка проекта"
+    exit 1
+fi
 
 print_header "Установка зависимостей"
 # Backend
-sudo -u nexus bash -c "cd /opt/nexus-node-manager/backend && npm install --production"
+cd /opt/nexus-node-manager/backend && npm install --production
 print_status "Backend зависимости установлены"
 
 # Frontend
-sudo -u nexus bash -c "cd /opt/nexus-node-manager/frontend && npm install && npm run build"
+cd /opt/nexus-node-manager/frontend && npm install && npm run build
 print_status "Frontend собран"
 
 print_header "Настройка конфигурации"
 # Создание .env файла
-sudo -u nexus tee /opt/nexus-node-manager/backend/.env > /dev/null <<EOF
+tee /opt/nexus-node-manager/backend/.env > /dev/null <<EOF
 PORT=3001
 NODE_ENV=production
 DB_PATH=./database/nexus-nodes.db
@@ -186,23 +186,22 @@ LOG_FILE=./logs/nexus-manager.log
 EOF
 
 # Создание директорий
-sudo -u nexus mkdir -p /opt/nexus-node-manager/backend/logs
-sudo -u nexus mkdir -p /opt/nexus-node-manager/database
-sudo -u nexus mkdir -p /opt/backups/nexus-manager
+mkdir -p /opt/nexus-node-manager/backend/logs
+mkdir -p /opt/nexus-node-manager/database
+mkdir -p /opt/backups/nexus-manager
 
 print_header "Инициализация базы данных"
-sudo -u nexus bash -c "cd /opt/nexus-node-manager/backend && npm run db:migrate"
+cd /opt/nexus-node-manager/backend && npm run db:migrate
 print_status "База данных инициализирована"
 
 print_header "Создание systemd сервиса"
-tee /etc/systemd/system/nexus-backend.service > /dev/null <<EOF
+run_cmd tee /etc/systemd/system/nexus-backend.service > /dev/null <<EOF
 [Unit]
 Description=Nexus Node Manager Backend
 After=network.target
 
 [Service]
 Type=simple
-User=nexus
 WorkingDirectory=/opt/nexus-node-manager/backend
 ExecStart=/usr/bin/node src/server.js
 Restart=always
@@ -300,13 +299,13 @@ tee /opt/nexus-node-manager/update.sh > /dev/null <<'EOF'
 #!/bin/bash
 set -e
 echo "🔄 Обновление Nexus Node Manager..."
-run_cmd systemctl stop nexus-backend
+systemctl stop nexus-backend
 cd /opt/nexus-node-manager
-sudo -u nexus git pull origin main
-sudo -u nexus bash -c "cd backend && npm install --production"
-sudo -u nexus bash -c "cd frontend && npm install && npm run build"
-sudo -u nexus bash -c "cd backend && npm run db:migrate"
-run_cmd systemctl start nexus-backend
+git pull origin main
+cd backend && npm install --production
+cd ../frontend && npm install && npm run build
+cd ../backend && npm run db:migrate
+systemctl start nexus-backend
 echo "✅ Обновление завершено!"
 EOF
 

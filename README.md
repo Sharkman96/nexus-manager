@@ -1,5 +1,7 @@
 # Nexus Node Manager
 
+[🇬🇧 English Version](README_EN.md) | [📋 Project Management](PROJECT_MANAGEMENT.md)
+
 Приложение для управления вычислительными узлами (prover nodes) в сети Nexus с мониторингом производительности.
 
 ## Функциональность
@@ -84,6 +86,74 @@ nexus/
    - Дождитесь завершения установки
 
 **Подробная инструкция**: [UBUNTU_INSTALL.md](UBUNTU_INSTALL.md)
+
+## Управление проектом
+
+После установки используйте следующие команды для управления:
+
+### Управление сервисом
+
+```bash
+# Проверить статус
+systemctl status nexus-backend
+
+# Остановить сервис
+systemctl stop nexus-backend
+
+# Запустить сервис
+systemctl start nexus-backend
+
+# Перезапустить сервис
+systemctl restart nexus-backend
+
+# Логи
+journalctl -u nexus-backend -f
+```
+
+### Обновление проекта
+
+```bash
+# Автоматическое обновление
+/opt/nexus-node-manager/update.sh
+
+# Ручное обновление
+cd /opt/nexus-node-manager
+git pull origin main
+systemctl restart nexus-backend
+```
+
+### Полное удаление
+
+```bash
+# Автоматическое удаление
+chmod +x scripts/remove.sh
+./scripts/remove.sh
+
+# Или вручную:
+systemctl stop nexus-backend
+systemctl disable nexus-backend
+rm -rf /opt/nexus-node-manager
+rm /etc/systemd/system/nexus-backend.service
+rm -f /etc/nginx/sites-available/nexus-manager
+rm -f /etc/nginx/sites-enabled/nexus-manager
+systemctl daemon-reload
+systemctl restart nginx
+```
+
+**Полная документация**: [PROJECT_MANAGEMENT.md](PROJECT_MANAGEMENT.md)
+
+## Документация
+
+- [🇬🇧 English README](README_EN.md)
+- [📋 Project Management Guide](PROJECT_MANAGEMENT.md)
+- [🛠️ Ubuntu Installation Guide](UBUNTU_INSTALL.md)
+- [🚀 Quick Start Guide](QUICK_START.md)
+
+## Скрипты
+
+- [📦 Установка](scripts/ubuntu-install.sh) - Автоматическая установка на Ubuntu
+- [🔄 Обновление](scripts/setup.sh) - Локальная разработка
+- [🗑️ Удаление](scripts/remove.sh) - Полное удаление проекта
 
 ### Ручная установка
 
