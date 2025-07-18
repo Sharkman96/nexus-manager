@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Автоматизированная установка Nexus Node Manager на Ubuntu Server
+# Версия: 2024-01-21 (исправлена проблема с пользователем nexus)
 # Использование: bash ubuntu-install.sh
 
 set -e
@@ -47,7 +48,8 @@ run_cmd() {
 # Определение пользователя
 REAL_USER=${SUDO_USER:-$(whoami)}
 if [ "$REAL_USER" = "root" ]; then
-    REAL_USER="nexus"
+    # Если запущен напрямую под root, используем root
+    REAL_USER="root"
 fi
 
 # Информация о пользователе
@@ -128,11 +130,30 @@ print_status "CMake установлен: $(cmake --version | head -1)"
 # Установка Rust для пользователя
 if [[ $INSTALL_NEXUS_CLI =~ ^[Yy]$ ]]; then
     print_header "Установка Rust и Nexus CLI"
-    sudo -u $REAL_USER bash -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
-    sudo -u $REAL_USER bash -c 'source ~/.cargo/env && rustc --version'
     
-    # Установка Nexus CLI
-    sudo -u $REAL_USER bash -c 'curl https://cli.nexus.xyz/ | sh'
+    if [ "$REAL_USER" = "root" ]; then
+        # Установка для root
+        print_info "Установка Rust для пользователя root"
+        curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source ~/.cargo/env && rustc --version
+        
+        # Установка Nexus CLI
+        curl https://cli.nexus.xyz/ | sh
+    else
+        # Установка для обычного пользователя
+        print_info "Установка Rust для пользователя $REAL_USER"
+        if id "$REAL_USER" &>/dev/null; then
+            sudo -u $REAL_USER bash -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
+            sudo -u $REAL_USER bash -c 'source ~/.cargo/env && rustc --version'
+            
+            # Установка Nexus CLI
+            sudo -u $REAL_USER bash -c 'curl https://cli.nexus.xyz/ | sh'
+        else
+            print_error "Пользователь $REAL_USER не существует"
+            exit 1
+        fi
+    fi
+    
     print_status "Nexus CLI установлен"
 fi
 
@@ -175,7 +196,7 @@ DB_PATH=./database/nexus-nodes.db
 NEXUS_RPC_URL=https://rpc.nexus.xyz/http
 NEXUS_WS_URL=wss://rpc.nexus.xyz/ws
 NEXUS_EXPLORER_API=https://explorer.nexus.xyz/api/v1
-NEXUS_CLI_PATH=/home/nexus/.cargo/bin/nexus-cli
+NEXUS_CLI_PATH=$([ "$REAL_USER" = "root" ] && echo "/root/.cargo/bin/nexus-cli" || echo "/home/$REAL_USER/.cargo/bin/nexus-cli")
 METRICS_UPDATE_INTERVAL=30000
 PERFORMANCE_HISTORY_DAYS=30
 CORS_ORIGINS=http://$SERVER_IP
