@@ -258,7 +258,7 @@ curl -I http://localhost/
 - Management Panel: `http://SERVER_IP/nexus/`
 - API: `http://SERVER_IP/nexus/api/`
 - WebSocket: `http://SERVER_IP/nexus/ws`
-- Server Info: `http://SERVER_IP/`
+- Root address: `http://SERVER_IP/` (free for other apps)
 
 **Development:**
 - Management Panel: `http://localhost:3000/`

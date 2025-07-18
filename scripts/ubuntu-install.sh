@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Автоматизированная установка Nexus Node Manager на Ubuntu Server
-# Версия: 2024-01-21-v2 (добавлена защита от создания пользователей)
+# Версия: 2024-01-21-v5 (убрана информационная страница, корневой адрес свободен)
 # Использование: bash ubuntu-install.sh
 #
 # ВАЖНО: Скрипт работает только с существующими пользователями!
@@ -87,8 +87,8 @@ if [ -z "$SERVER_IP" ]; then
     SERVER_IP="localhost"
 fi
 
-print_info "Сервер будет доступен по адресу: http://$SERVER_IP:3000"
-print_info "Панель управления: http://$SERVER_IP"
+print_info "Панель управления: http://$SERVER_IP/nexus/"
+print_info "Корневой адрес http://$SERVER_IP/ остается свободным для других приложений"
 
 read -p "Установить Nexus CLI? (y/n): " -n 1 -r INSTALL_NEXUS_CLI
 echo
@@ -180,10 +180,11 @@ fi
 
 print_header "Подготовка проекта"
 # Проверка что проект уже клонирован
-if [ ! -d "$(pwd)/nexus-node-manager" ] && [ ! -d "/opt/nexus-node-manager" ]; then
+if [ ! -d "$(pwd)/nexus-node-manager" ] && [ ! -d "$(pwd)/nexus" ] && [ ! -d "/opt/nexus-node-manager" ]; then
     print_error "Проект не найден. Клонируйте проект сначала:"
     print_info "git clone https://github.com/Sharkman96/nexus-manager.git nexus-node-manager"
     print_info "cd nexus-node-manager"
+    print_info "Или используйте существующую папку: nexus или nexus-node-manager"
     print_info "Затем запустите скрипт снова"
     exit 1
 fi
@@ -192,6 +193,8 @@ fi
 run_cmd mkdir -p /opt/nexus-node-manager
 if [ -d "$(pwd)/nexus-node-manager" ]; then
     cp -r $(pwd)/nexus-node-manager/* /opt/nexus-node-manager/
+elif [ -d "$(pwd)/nexus" ]; then
+    cp -r $(pwd)/nexus/* /opt/nexus-node-manager/
 elif [ -d "/opt/nexus-node-manager" ]; then
     print_info "Проект уже скопирован в /opt/nexus-node-manager"
 else
@@ -270,12 +273,6 @@ run_cmd tee /etc/nginx/sites-available/nexus-manager > /dev/null <<EOF
 server {
     listen 80;
     server_name $SERVER_IP _;
-    
-    # Редирект с корня на информационную страницу
-    location = / {
-        return 200 '<html><body><h1>Server Status: OK</h1><p>Nexus Node Manager: <a href="/nexus/">Access Panel</a></p></body></html>';
-        add_header Content-Type text/html;
-    }
     
     # Редирект с /nexus на /nexus/
     location = /nexus {
@@ -422,7 +419,7 @@ print_header "Установка завершена! 🎉"
 print_status "Nexus Node Manager успешно установлен"
 print_info "Панель управления: http://$SERVER_IP/nexus/"
 print_info "API доступен по адресу: http://$SERVER_IP/nexus/api/"
-print_info "Корневая страница: http://$SERVER_IP/ (информация о сервере)"
+print_info "Корневой адрес http://$SERVER_IP/ остается свободным"
 print_info ""
 print_info "Полезные команды:"
 print_info "• Статус сервиса: systemctl status nexus-backend"
@@ -437,12 +434,6 @@ print_info "3. Получите Prover ID и добавьте узел"
 
 # Проверка доступности
 print_header "Тестирование доступности"
-if curl -s -o /dev/null -w "%{http_code}" "http://$SERVER_IP/" | grep -q "200"; then
-    print_status "Корневая страница доступна"
-else
-    print_warning "Корневая страница недоступна"
-fi
-
 if curl -s -o /dev/null -w "%{http_code}" "http://$SERVER_IP/nexus/" | grep -q "200"; then
     print_status "Панель управления доступна по /nexus/"
 else

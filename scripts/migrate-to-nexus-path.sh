@@ -104,12 +104,6 @@ server {
     listen 80;
     server_name $SERVER_IP _;
     
-    # Редирект с корня на информационную страницу
-    location = / {
-        return 200 '<html><body><h1>Server Status: OK</h1><p>Nexus Node Manager: <a href="/nexus/">Access Panel</a></p></body></html>';
-        add_header Content-Type text/html;
-    }
-    
     # Редирект с /nexus на /nexus/
     location = /nexus {
         return 301 \$scheme://\$server_name/nexus/;
@@ -201,12 +195,6 @@ else
 fi
 
 # Проверка доступности
-if curl -s -o /dev/null -w "%{http_code}" "http://$SERVER_IP/" | grep -q "200"; then
-    print_status "Корневая страница доступна"
-else
-    print_warning "Корневая страница недоступна"
-fi
-
 if curl -s -o /dev/null -w "%{http_code}" "http://$SERVER_IP/nexus/" | grep -q "200"; then
     print_status "Панель управления доступна по /nexus/"
 else
@@ -219,7 +207,7 @@ print_info ""
 print_info "Новые адреса:"
 print_info "• Панель управления: http://$SERVER_IP/nexus/"
 print_info "• API: http://$SERVER_IP/nexus/api/"
-print_info "• Корневая страница: http://$SERVER_IP/ (информация о сервере)"
+print_info "• Корневой адрес http://$SERVER_IP/ остается свободным"
 print_info ""
 print_info "Старые закладки автоматически не будут работать!"
 print_info "Обновите закладки на новый адрес: http://$SERVER_IP/nexus/"

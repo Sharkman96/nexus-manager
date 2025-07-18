@@ -100,9 +100,8 @@ Nexus Node Manager is a web application for managing Nexus prover nodes with rea
 After installation, the management panel will be available at:
 - **Management Panel**: `http://SERVER_IP/nexus/`
 - **API**: `http://SERVER_IP/nexus/api/`
-- **Root Page**: `http://SERVER_IP/` (server information)
 
-This allows you to have other applications on the server at the root address.
+The root address `http://SERVER_IP/` remains free for other applications.
 
 ## Project Management
 
