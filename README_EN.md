@@ -85,6 +85,8 @@ Nexus Node Manager is a web application for managing Nexus prover nodes with rea
    ./scripts/ubuntu-install.sh
    ```
 
+   > ⚠️ **Important**: The script works only with existing users and never creates new ones! Use a regular user with sudo privileges or run as root.
+
 3. Follow the installer prompts:
    - Choose additional options (Nexus CLI, auto-updates)
    - Wait for installation to complete

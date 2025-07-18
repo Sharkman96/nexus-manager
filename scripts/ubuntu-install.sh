@@ -1,8 +1,11 @@
 #!/bin/bash
 
 # Автоматизированная установка Nexus Node Manager на Ubuntu Server
-# Версия: 2024-01-21 (исправлена проблема с пользователем nexus)
+# Версия: 2024-01-21-v2 (добавлена защита от создания пользователей)
 # Использование: bash ubuntu-install.sh
+#
+# ВАЖНО: Скрипт работает только с существующими пользователями!
+# Никогда не создавайте новых пользователей в этом скрипте!
 
 set -e
 
@@ -118,7 +121,25 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | run_cmd gpg --dearmor 
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | run_cmd tee /etc/apt/sources.list.d/docker.list > /dev/null
 run_cmd apt update
 run_cmd apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-run_cmd usermod -aG docker $REAL_USER
+
+# Добавить пользователя в группу docker (только если пользователь не root)
+if [ "$REAL_USER" != "root" ] && id "$REAL_USER" &>/dev/null; then
+    print_info "Добавление пользователя $REAL_USER в группу docker..."
+    if run_cmd usermod -aG docker $REAL_USER 2>/dev/null; then
+        print_status "Пользователь $REAL_USER добавлен в группу docker"
+    else
+        print_warning "Не удалось добавить пользователя $REAL_USER в группу docker"
+        print_info "Это не критично - Docker будет работать под root"
+    fi
+else
+    print_info "Пропущено добавление в группу docker (пользователь: $REAL_USER)"
+    if [ "$REAL_USER" = "root" ]; then
+        print_info "Причина: пользователь root (Docker будет работать под root)"
+    else
+        print_info "Причина: пользователь $REAL_USER не существует"
+    fi
+fi
+
 run_cmd systemctl enable docker
 run_cmd systemctl start docker
 print_status "Docker установлен и настроен"

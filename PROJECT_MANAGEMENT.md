@@ -265,6 +265,20 @@ curl -I http://localhost/
 - API: `http://localhost:3001/api/`
 - WebSocket: `http://localhost:3001/ws`
 
+## Development Guidelines
+
+### User Management Rule
+
+> ⚠️ **CRITICAL**: The installation script must never create new users! 
+> 
+> **Rules:**
+> - Work only with existing users
+> - Use `$SUDO_USER` or `$(whoami)` for user detection
+> - Never use `adduser`, `useradd`, or user creation commands
+> - If user is root, work as root
+> - If regular user, work through `sudo -u $USER`
+> - Always check user existence with `id "$USER" &>/dev/null`
+
 ## Troubleshooting
 
 ### Common Issues
