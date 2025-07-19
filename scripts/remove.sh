@@ -12,7 +12,7 @@
 # Что удаляется:
 #   - Системный сервис nexus-backend
 #   - Конфигурация Nginx
-#   - Файлы проекта в /opt/nexus-node-manager
+#   - Файлы проекта в /opt/nexus-manager
 #   - Локальные копии проекта (во всех домашних папках)
 #   - Правила firewall
 #   - Резервные копии (опционально)
@@ -119,7 +119,7 @@ elif [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "Что удаляется:"
     echo "  • Системный сервис nexus-backend"
     echo "  • Конфигурация Nginx"
-    echo "  • Файлы проекта в /opt/nexus-node-manager"
+    echo "  • Файлы проекта в /opt/nexus-manager"
     echo "  • Локальные копии проекта (во всех домашних папках)"
     echo "  • Правила firewall"
     echo "  • Резервные копии (опционально)"
@@ -142,7 +142,7 @@ if [ "$FORCE_REMOVE" = false ]; then
     print_info "Будут удалены:"
     print_info "- Системный сервис nexus-backend"
     print_info "- Конфигурация Nginx"
-    print_info "- Файлы проекта в /opt/nexus-node-manager"
+    print_info "- Файлы проекта в /opt/nexus-manager"
     print_info "- Локальные копии проекта"
     print_info "- Правила firewall"
     print_info "- Резервные копии (опционально)"
@@ -164,7 +164,7 @@ if [ "$QUICK_MODE" = true ]; then
     print_info "Удаление только основных папок проекта..."
     
     # Удаление основных папок
-    run_cmd rm -rf /opt/nexus-node-manager /opt/nexus-manager ~/nexus-node-manager ~/nexus-manager 2>/dev/null || true
+    run_cmd rm -rf /opt/nexus-manager ~/nexus-manager 2>/dev/null || true
     
     # Остановка сервиса (если есть)
     if systemctl is-active --quiet nexus-backend 2>/dev/null; then
@@ -227,13 +227,13 @@ print_header "Удаление файлов проекта"
 
 # Быстрое удаление основных папок
 print_info "Удаление основных папок проекта..."
-run_cmd rm -rf /opt/nexus-node-manager /opt/nexus-manager ~/nexus-node-manager ~/nexus-manager 2>/dev/null || true
+run_cmd rm -rf /opt/nexus-manager ~/nexus-manager 2>/dev/null || true
 print_status "Основные папки проекта удалены"
 
 # Дополнительная проверка и удаление
-if [ -d "/opt/nexus-node-manager" ]; then
-    run_cmd rm -rf /opt/nexus-node-manager
-    print_status "Файлы проекта в /opt/nexus-node-manager удалены"
+if [ -d "/opt/nexus-manager" ]; then
+    run_cmd rm -rf /opt/nexus-manager
+    print_status "Файлы проекта в /opt/nexus-manager удалены"
 fi
 
 if [ -d "/opt/nexus-manager" ]; then

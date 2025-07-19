@@ -202,27 +202,27 @@ fi
 
 print_header "Подготовка проекта"
 # Проверка что проект уже клонирован
-if [ ! -d "$(pwd)/nexus-node-manager" ] && [ ! -d "$(pwd)/nexus" ] && [ ! -d "/opt/nexus-node-manager" ] && [ ! -d "$(dirname $(pwd))/nexus-node-manager" ] && [ ! -d "$(dirname $(pwd))/nexus" ]; then
+if [ ! -d "$(pwd)/nexus-manager" ] && [ ! -d "$(pwd)/nexus" ] && [ ! -d "/opt/nexus-manager" ] && [ ! -d "$(dirname $(pwd))/nexus-manager" ] && [ ! -d "$(dirname $(pwd))/nexus" ]; then
     print_error "Проект не найден. Клонируйте проект сначала:"
-    print_info "git clone https://github.com/Sharkman96/nexus-manager.git nexus-node-manager"
-    print_info "cd nexus-node-manager"
-    print_info "Или используйте существующую папку: nexus или nexus-node-manager"
+print_info "git clone https://github.com/Sharkman96/nexus-manager.git"
+print_info "cd nexus-manager"
+print_info "Или используйте существующую папку: nexus или nexus-manager"
     print_info "Затем запустите скрипт снова"
     exit 1
 fi
 
 # Копирование файлов в /opt
-run_cmd mkdir -p /opt/nexus-node-manager
-if [ -d "$(pwd)/nexus-node-manager" ]; then
-    cp -r $(pwd)/nexus-node-manager/* /opt/nexus-node-manager/
+run_cmd mkdir -p /opt/nexus-manager
+if [ -d "$(pwd)/nexus-manager" ]; then
+    cp -r $(pwd)/nexus-manager/* /opt/nexus-manager/
 elif [ -d "$(pwd)/nexus" ]; then
-    cp -r $(pwd)/nexus/* /opt/nexus-node-manager/
-elif [ -d "$(dirname $(pwd))/nexus-node-manager" ]; then
-    cp -r $(dirname $(pwd))/nexus-node-manager/* /opt/nexus-node-manager/
+    cp -r $(pwd)/nexus/* /opt/nexus-manager/
+elif [ -d "$(dirname $(pwd))/nexus-manager" ]; then
+    cp -r $(dirname $(pwd))/nexus-manager/* /opt/nexus-manager/
 elif [ -d "$(dirname $(pwd))/nexus" ]; then
-    cp -r $(dirname $(pwd))/nexus/* /opt/nexus-node-manager/
-elif [ -d "/opt/nexus-node-manager" ]; then
-    print_info "Проект уже скопирован в /opt/nexus-node-manager"
+    cp -r $(dirname $(pwd))/nexus/* /opt/nexus-manager/
+elif [ -d "/opt/nexus-manager" ]; then
+    print_info "Проект уже скопирован в /opt/nexus-manager"
 else
     print_error "Не найдена папка проекта"
     exit 1
@@ -230,22 +230,22 @@ fi
 
 print_header "Установка зависимостей"
 # Backend
-cd /opt/nexus-node-manager/backend && npm install --production
+cd /opt/nexus-manager/backend && npm install --production
 print_status "Backend зависимости установлены"
 
 # Frontend
-cd /opt/nexus-node-manager/frontend && rm -rf node_modules package-lock.json && npm install --legacy-peer-deps --force && npm run build
+cd /opt/nexus-manager/frontend && rm -rf node_modules package-lock.json && npm install --legacy-peer-deps --force && npm run build
 # Копирование frontend файлов
-cp -r /opt/nexus-node-manager/frontend/build/* /var/www/nexus-manager/
+cp -r /opt/nexus-manager/frontend/build/* /var/www/nexus-manager/
 chown -R www-data:www-data /var/www/nexus-manager/
 chmod -R 755 /var/www/nexus-manager/
 print_status "Frontend собран и скопирован"
 
 print_header "Настройка конфигурации"
 # Создание .env файла автоматически
-if [ ! -f "/opt/nexus-node-manager/backend/.env" ]; then
+if [ ! -f "/opt/nexus-manager/backend/.env" ]; then
     print_info "Создание .env файла..."
-    tee /opt/nexus-node-manager/backend/.env > /dev/null <<EOF
+    tee /opt/nexus-manager/backend/.env > /dev/null <<EOF
 PORT=3002
 NODE_ENV=production
 DB_PATH=../database/nexus-nodes.db
@@ -274,19 +274,19 @@ else
 fi
 
 # Создание директорий
-mkdir -p /opt/nexus-node-manager/backend/logs
-mkdir -p /opt/nexus-node-manager/database
-mkdir -p /opt/nexus-node-manager/nexus-docker
+mkdir -p /opt/nexus-manager/backend/logs
+mkdir -p /opt/nexus-manager/database
+mkdir -p /opt/nexus-manager/nexus-docker
 mkdir -p /opt/backups/nexus-manager
 mkdir -p /var/www/nexus-manager
 
 # Установка правильных прав доступа
-chown -R $REAL_USER:$REAL_USER /opt/nexus-node-manager/database
-chown -R $REAL_USER:$REAL_USER /opt/nexus-node-manager/nexus-docker
-chown -R $REAL_USER:$REAL_USER /opt/nexus-node-manager/backend/logs
+chown -R $REAL_USER:$REAL_USER /opt/nexus-manager/database
+chown -R $REAL_USER:$REAL_USER /opt/nexus-manager/nexus-docker
+chown -R $REAL_USER:$REAL_USER /opt/nexus-manager/backend/logs
 
 print_header "Инициализация базы данных"
-cd /opt/nexus-node-manager/backend
+cd /opt/nexus-manager/backend
 # Запуск основных миграций
 if npm run db:migrate; then
     print_status "Основные миграции выполнены"
@@ -311,7 +311,7 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/nexus-node-manager/backend
+WorkingDirectory=/opt/nexus-manager/backend
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=10
@@ -413,12 +413,12 @@ print_status "Firewall настроен"
 
 print_header "Создание скриптов управления"
 # Скрипт обновления
-tee /opt/nexus-node-manager/update.sh > /dev/null <<'EOF'
+tee /opt/nexus-manager/update.sh > /dev/null <<'EOF'
 #!/bin/bash
 set -e
 echo "🔄 Обновление Nexus Node Manager..."
 systemctl stop nexus-backend
-cd /opt/nexus-node-manager
+cd /opt/nexus-manager
 git pull origin main
 cd backend && npm install --production
 cd ../frontend && rm -rf node_modules package-lock.json && npm install --legacy-peer-deps --force && npm run build
@@ -428,23 +428,23 @@ echo "✅ Обновление завершено!"
 EOF
 
 # Скрипт бэкапа
-tee /opt/nexus-node-manager/backup.sh > /dev/null <<'EOF'
+tee /opt/nexus-manager/backup.sh > /dev/null <<'EOF'
 #!/bin/bash
 BACKUP_DIR="/opt/backups/nexus-manager"
 DATE=$(date +%Y%m%d_%H%M%S)
 mkdir -p $BACKUP_DIR
-cp /opt/nexus-node-manager/database/nexus-nodes.db $BACKUP_DIR/nexus-nodes_$DATE.db
-cp /opt/nexus-node-manager/backend/.env $BACKUP_DIR/env_$DATE
+cp /opt/nexus-manager/database/nexus-nodes.db $BACKUP_DIR/nexus-nodes_$DATE.db
+cp /opt/nexus-manager/backend/.env $BACKUP_DIR/env_$DATE
 find $BACKUP_DIR -name "*.db" -mtime +7 -delete
 find $BACKUP_DIR -name "env_*" -mtime +7 -delete
 echo "✅ Бэкап создан: $BACKUP_DIR"
 EOF
 
-chmod +x /opt/nexus-node-manager/update.sh
-chmod +x /opt/nexus-node-manager/backup.sh
+chmod +x /opt/nexus-manager/update.sh
+chmod +x /opt/nexus-manager/backup.sh
 
 # Настройка cron для бэкапов
-(crontab -l 2>/dev/null; echo "0 2 * * * /opt/nexus-node-manager/backup.sh") | crontab -
+(crontab -l 2>/dev/null; echo "0 2 * * * /opt/nexus-manager/backup.sh") | crontab -
 
 print_status "Скрипты управления созданы"
 
@@ -488,8 +488,8 @@ print_info ""
 print_info "Полезные команды:"
 print_info "• Статус сервиса: systemctl status nexus-backend"
 print_info "• Просмотр логов: journalctl -u nexus-backend -f"
-print_info "• Обновление: /opt/nexus-node-manager/update.sh"
-print_info "• Бэкап: /opt/nexus-node-manager/backup.sh"
+print_info "• Обновление: /opt/nexus-manager/update.sh"
+print_info "• Бэкап: /opt/nexus-manager/backup.sh"
 print_info ""
 print_info "Следующие шаги:"
 print_info "1. Откройте http://$SERVER_IP/nexus/ в браузере"

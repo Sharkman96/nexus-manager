@@ -94,9 +94,9 @@ fi
 
 # 5. Проверка файлов приложения
 print_header "5. Файлы приложения"
-if [ -d "/opt/nexus-node-manager" ]; then
+if [ -d "/opt/nexus-manager" ]; then
     print_status "Директория приложения найдена"
-    ls -la /opt/nexus-node-manager/
+    ls -la /opt/nexus-manager/
 else
     print_error "Директория приложения не найдена"
 fi
@@ -110,19 +110,19 @@ fi
 
 # 6. Проверка .env файла
 print_header "6. Конфигурация"
-if [ -f "/opt/nexus-node-manager/backend/.env" ]; then
+if [ -f "/opt/nexus-manager/backend/.env" ]; then
     print_status ".env файл найден"
     echo "Содержимое .env:"
-    cat /opt/nexus-node-manager/backend/.env
+    cat /opt/nexus-manager/backend/.env
 else
     print_error ".env файл не найден"
 fi
 
 # 7. Проверка базы данных
 print_header "7. База данных"
-if [ -f "/opt/nexus-node-manager/database/nexus-nodes.db" ]; then
+if [ -f "/opt/nexus-manager/database/nexus-nodes.db" ]; then
     print_status "База данных найдена"
-    ls -la /opt/nexus-node-manager/database/
+    ls -la /opt/nexus-manager/database/
 else
     print_error "База данных не найдена"
 fi

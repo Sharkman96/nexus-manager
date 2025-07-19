@@ -86,8 +86,8 @@ nexus/
 
 1. Клонируйте репозиторий:
    ```bash
-   git clone https://github.com/Sharkman96/nexus-manager.git nexus-node-manager
-   cd nexus-node-manager
+   git clone https://github.com/Sharkman96/nexus-manager.git
+   cd nexus-manager
    ```
 
 2. Запустите автоматизированный скрипт:
@@ -139,10 +139,10 @@ journalctl -u nexus-backend -f
 
 ```bash
 # Автоматическое обновление
-/opt/nexus-node-manager/update.sh
+/opt/nexus-manager/update.sh
 
 # Ручное обновление
-cd /opt/nexus-node-manager
+cd /opt/nexus-manager
 git pull origin main
 systemctl restart nexus-backend
 ```
@@ -161,12 +161,12 @@ chmod +x scripts/remove.sh
 ./scripts/remove.sh --quick
 
 # Или командой напрямую
-sudo rm -rf /opt/nexus-node-manager /opt/nexus-manager ~/nexus-node-manager ~/nexus-manager
+sudo rm -rf /opt/nexus-manager ~/nexus-manager
 
 # Или полное ручное удаление:
 systemctl stop nexus-backend
 systemctl disable nexus-backend
-rm -rf /opt/nexus-node-manager
+rm -rf /opt/nexus-manager
 rm /etc/systemd/system/nexus-backend.service
 rm -f /etc/nginx/sites-available/nexus-manager
 rm -f /etc/nginx/sites-enabled/nexus-manager
