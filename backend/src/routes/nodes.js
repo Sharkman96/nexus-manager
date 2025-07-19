@@ -250,6 +250,57 @@ router.get('/:id/logs', async (req, res) => {
 });
 
 /**
+ * GET /api/nodes/:id/metrics - Получение метрик узла
+ */
+router.get('/:id/metrics', async (req, res) => {
+  try {
+    const nodeId = parseInt(req.params.id);
+    const node = await req.db.getNode(nodeId);
+    
+    if (!node) {
+      return res.status(404).json({
+        success: false,
+        error: 'Node not found'
+      });
+    }
+    
+    // Получение метрик из CLI и базы данных
+    const [cliMetrics, dbMetrics] = await Promise.all([
+      req.nexusCLI.getNodeMetrics(node.prover_id),
+      req.db.getLatestMetrics(nodeId)
+    ]);
+    
+    // Получение системных метрик
+    const systemInfo = await req.systemMonitor.getSystemInfo();
+    
+    const metrics = {
+      node_id: nodeId,
+      prover_id: node.prover_id,
+      timestamp: new Date().toISOString(),
+      cli_metrics: cliMetrics,
+      db_metrics: dbMetrics,
+      system_metrics: {
+        cpu_usage: systemInfo.cpu.usage,
+        memory_usage: systemInfo.memory.usage,
+        disk_usage: systemInfo.disk.usage,
+        network: systemInfo.network
+      }
+    };
+    
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    console.error('❌ Error getting node metrics:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * GET /api/nodes/:id - Получение информации о конкретном узле
  */
 router.get('/:id', async (req, res) => {

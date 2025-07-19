@@ -192,16 +192,53 @@ class NexusCLI {
    */
   async getNodeMetrics(proverId) {
     try {
-      const { stdout } = await execAsync(`${this.cliPath} node metrics --prover-id ${proverId}`);
+      console.log(`📊 Getting metrics for node ${proverId}`);
       
-      const metrics = this.parseMetricsOutput(stdout);
+      // Получаем статус ноды
+      const status = await this.getNodeStatus(proverId);
+      
+      // Базовые метрики на основе статуса
+      const metrics = {
+        status: status.success ? status.status.status : 'unknown',
+        uptime: status.success ? status.status.uptime : '0',
+        tasks_completed: status.success ? status.status.tasks_completed : 0,
+        nex_points: status.success ? status.status.nex_points : 0,
+        last_check: new Date().toISOString()
+      };
+      
+      // Попробуем получить дополнительные метрики через CLI
+      try {
+        const { exec } = require('child_process');
+        const { stdout } = await new Promise((resolve, reject) => {
+          exec(`${this.cliPath} --help`, (error, stdout) => {
+            if (error) reject(error);
+            else resolve({ stdout });
+          });
+        });
+        
+        // Если есть команда metrics, попробуем её использовать
+        if (stdout.includes('metrics')) {
+          const { stdout: metricsOutput } = await new Promise((resolve, reject) => {
+            exec(`${this.cliPath} metrics --node-id ${proverId}`, (error, stdout) => {
+              if (error) reject(error);
+              else resolve({ stdout });
+            });
+          });
+          
+          const parsedMetrics = this.parseMetricsOutput(metricsOutput);
+          Object.assign(metrics, parsedMetrics);
+        }
+      } catch (cliError) {
+        console.log(`⚠️ CLI metrics not available for node ${proverId}:`, cliError.message);
+      }
       
       return {
         success: true,
         metrics: metrics,
-        raw_output: stdout
+        raw_output: 'Metrics generated from node status'
       };
     } catch (error) {
+      console.error(`❌ Error getting metrics for node ${proverId}:`, error);
       return {
         success: false,
         error: error.message,
