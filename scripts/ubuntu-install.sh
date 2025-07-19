@@ -172,12 +172,52 @@ if [[ $INSTALL_NEXUS_CLI =~ ^[Yy]$ ]]; then
         fi
         git clone https://github.com/nexus-xyz/nexus-cli.git
         cd nexus-cli
-        cargo build --release
-        cp target/release/nexus-cli /usr/local/bin/nexus-cli
-        chmod +x /usr/local/bin/nexus-cli
+        
+        # Проверяем тип проекта
+        if [ -f "Cargo.toml" ]; then
+            print_info "Обнаружен Rust проект, компилируем..."
+            cargo build --release
+            cp target/release/nexus-cli /usr/local/bin/nexus-cli
+            chmod +x /usr/local/bin/nexus-cli
+        elif [ -f "package.json" ]; then
+            print_info "Обнаружен Node.js проект, устанавливаем..."
+            npm install
+            npm run build
+            # Ищем исполняемый файл
+            if [ -f "dist/nexus-cli" ]; then
+                cp dist/nexus-cli /usr/local/bin/nexus-cli
+            elif [ -f "bin/nexus-cli" ]; then
+                cp bin/nexus-cli /usr/local/bin/nexus-cli
+            else
+                # Создаем простой wrapper
+                echo '#!/bin/bash' > /usr/local/bin/nexus-cli
+                echo 'cd /tmp/nexus-cli && node index.js "$@"' >> /usr/local/bin/nexus-cli
+            fi
+            chmod +x /usr/local/bin/nexus-cli
+        else
+            print_warning "Неизвестный тип проекта в nexus-cli репозитории"
+            print_info "Содержимое папки:"
+            ls -la
+            print_info "Попытка альтернативной установки..."
+            
+            # Попробуем установить через npm
+            if command -v npm &> /dev/null; then
+                print_info "Установка nexus-cli через npm..."
+                npm install -g @nexus/cli 2>/dev/null || npm install -g nexus-cli 2>/dev/null || {
+                    print_warning "Nexus CLI недоступен через npm"
+                    print_info "Установка пропущена. CLI можно установить вручную позже."
+                }
+            else
+                print_warning "npm не найден, установка Nexus CLI пропущена"
+            fi
+        fi
         
         # Проверка установки
-        nexus-cli --version
+        if command -v nexus-cli &> /dev/null; then
+            nexus-cli --version
+        else
+            print_warning "Nexus CLI не установлен или недоступен"
+        fi
     else
         # Установка для обычного пользователя
         print_info "Установка Rust для пользователя $REAL_USER"
@@ -195,12 +235,54 @@ if [[ $INSTALL_NEXUS_CLI =~ ^[Yy]$ ]]; then
             fi
             git clone https://github.com/nexus-xyz/nexus-cli.git
             cd nexus-cli
-            sudo -u $REAL_USER bash -c 'cargo build --release'
-            sudo cp target/release/nexus-cli /usr/local/bin/nexus-cli
-            sudo chmod +x /usr/local/bin/nexus-cli
+            
+            # Проверяем тип проекта
+            if [ -f "Cargo.toml" ]; then
+                print_info "Обнаружен Rust проект, компилируем..."
+                sudo -u $REAL_USER bash -c 'cargo build --release'
+                sudo cp target/release/nexus-cli /usr/local/bin/nexus-cli
+                sudo chmod +x /usr/local/bin/nexus-cli
+            elif [ -f "package.json" ]; then
+                print_info "Обнаружен Node.js проект, устанавливаем..."
+                sudo -u $REAL_USER bash -c 'npm install'
+                sudo -u $REAL_USER bash -c 'npm run build'
+                # Ищем исполняемый файл
+                if [ -f "dist/nexus-cli" ]; then
+                    sudo cp dist/nexus-cli /usr/local/bin/nexus-cli
+                elif [ -f "bin/nexus-cli" ]; then
+                    sudo cp bin/nexus-cli /usr/local/bin/nexus-cli
+                else
+                    # Создаем простой wrapper
+                    sudo tee /usr/local/bin/nexus-cli > /dev/null <<'EOF'
+#!/bin/bash
+cd /tmp/nexus-cli && node index.js "$@"
+EOF
+                fi
+                sudo chmod +x /usr/local/bin/nexus-cli
+            else
+                print_warning "Неизвестный тип проекта в nexus-cli репозитории"
+                print_info "Содержимое папки:"
+                ls -la
+                print_info "Попытка альтернативной установки..."
+                
+                # Попробуем установить через npm
+                if command -v npm &> /dev/null; then
+                    print_info "Установка nexus-cli через npm..."
+                    npm install -g @nexus/cli 2>/dev/null || npm install -g nexus-cli 2>/dev/null || {
+                        print_warning "Nexus CLI недоступен через npm"
+                        print_info "Установка пропущена. CLI можно установить вручную позже."
+                    }
+                else
+                    print_warning "npm не найден, установка Nexus CLI пропущена"
+                fi
+            fi
             
             # Проверка установки
-            nexus-cli --version
+            if command -v nexus-cli &> /dev/null; then
+                nexus-cli --version
+            else
+                print_warning "Nexus CLI не установлен или недоступен"
+            fi
         else
             print_error "Пользователь $REAL_USER не существует"
             exit 1
