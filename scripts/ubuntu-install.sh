@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Автоматизированная установка Nexus Node Manager на Ubuntu Server
-# Версия: 2024-01-21-v16 (исправлен путь frontend и добавлен trust proxy)
+# Версия: 2024-01-21-v17 (интеграция с Nexus CLI для управления нодами)
 # Использование: bash ubuntu-install.sh
 #
 # ВАЖНО: Скрипт работает только с существующими пользователями!
@@ -158,8 +158,17 @@ if [[ $INSTALL_NEXUS_CLI =~ ^[Yy]$ ]]; then
         curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         source ~/.cargo/env && rustc --version
         
-        # Установка Nexus CLI
-        curl https://cli.nexus.xyz/ | sh
+        # Установка Nexus CLI из GitHub
+        print_info "Установка Nexus CLI из GitHub"
+        cd /tmp
+        git clone https://github.com/nexus-xyz/nexus-cli.git
+        cd nexus-cli
+        cargo build --release
+        cp target/release/nexus-cli /usr/local/bin/nexus-cli
+        chmod +x /usr/local/bin/nexus-cli
+        
+        # Проверка установки
+        nexus-cli --version
     else
         # Установка для обычного пользователя
         print_info "Установка Rust для пользователя $REAL_USER"
@@ -167,8 +176,17 @@ if [[ $INSTALL_NEXUS_CLI =~ ^[Yy]$ ]]; then
             sudo -u $REAL_USER bash -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
             sudo -u $REAL_USER bash -c 'source ~/.cargo/env && rustc --version'
             
-            # Установка Nexus CLI
-            sudo -u $REAL_USER bash -c 'curl https://cli.nexus.xyz/ | sh'
+            # Установка Nexus CLI из GitHub
+            print_info "Установка Nexus CLI из GitHub"
+            cd /tmp
+            git clone https://github.com/nexus-xyz/nexus-cli.git
+            cd nexus-cli
+            sudo -u $REAL_USER bash -c 'cargo build --release'
+            sudo cp target/release/nexus-cli /usr/local/bin/nexus-cli
+            sudo chmod +x /usr/local/bin/nexus-cli
+            
+            # Проверка установки
+            nexus-cli --version
         else
             print_error "Пользователь $REAL_USER не существует"
             exit 1
@@ -228,7 +246,7 @@ DB_PATH=./database/nexus-nodes.db
 NEXUS_RPC_URL=https://rpc.nexus.xyz/http
 NEXUS_WS_URL=wss://rpc.nexus.xyz/ws
 NEXUS_EXPLORER_API=https://explorer.nexus.xyz/api/v1
-NEXUS_CLI_PATH=$([ "$REAL_USER" = "root" ] && echo "/root/.cargo/bin/nexus-cli" || echo "/home/$REAL_USER/.cargo/bin/nexus-cli")
+NEXUS_CLI_PATH=/usr/local/bin/nexus-cli
 METRICS_UPDATE_INTERVAL=30000
 PERFORMANCE_HISTORY_DAYS=30
 CORS_ORIGINS=http://$SERVER_IP

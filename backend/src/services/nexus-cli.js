@@ -33,12 +33,14 @@ class NexusCLI {
    */
   async startNode(proverId, options = {}) {
     try {
-      const command = this.buildStartCommand(proverId, options);
+      // Используем реальный Nexus CLI для запуска ноды
+      const command = `${this.cliPath} start --node-id ${proverId}`;
       console.log(`🚀 Starting node with command: ${command}`);
 
-      const nodeProcess = spawn(this.cliPath, command.split(' ').slice(1), {
+      const nodeProcess = spawn(this.cliPath, ['start', '--node-id', proverId], {
         stdio: ['pipe', 'pipe', 'pipe'],
-        detached: false
+        detached: true, // Запускаем в фоновом режиме
+        cwd: process.cwd()
       });
 
       // Сохраняем процесс для управления
@@ -57,6 +59,9 @@ class NexusCLI {
         console.log(`[${proverId}] Process exited with code ${code}`);
         this.runningNodes.delete(proverId);
       });
+
+      // Ждем немного чтобы убедиться что процесс запустился
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       return {
         success: true,
@@ -102,7 +107,7 @@ class NexusCLI {
         };
       } else {
         // Попытка остановки через CLI
-        const { stdout } = await execAsync(`${this.cliPath} node stop --prover-id ${proverId}`);
+        const { stdout } = await execAsync(`${this.cliPath} stop --node-id ${proverId}`);
         return {
           success: true,
           message: 'Node stopped via CLI',
@@ -118,12 +123,12 @@ class NexusCLI {
     }
   }
 
-  /**
+    /**
    * Получение статуса узла
    */
   async getNodeStatus(proverId) {
     try {
-      const { stdout } = await execAsync(`${this.cliPath} node status --prover-id ${proverId}`);
+      const { stdout } = await execAsync(`${this.cliPath} status --node-id ${proverId}`);
       
       // Парсим вывод CLI
       const status = this.parseStatusOutput(stdout);
@@ -191,7 +196,7 @@ class NexusCLI {
    */
   async getNodeLogs(proverId, lines = 100) {
     try {
-      const { stdout } = await execAsync(`${this.cliPath} node logs --prover-id ${proverId} --lines ${lines}`);
+      const { stdout } = await execAsync(`${this.cliPath} logs --node-id ${proverId} --lines ${lines}`);
       
       return {
         success: true,
@@ -284,6 +289,126 @@ class NexusCLI {
     }
     
     return metrics;
+  }
+
+  /**
+   * Получение списка всех нод
+   */
+  async listNodes() {
+    try {
+      const { stdout } = await execAsync(`${this.cliPath} list`);
+      
+      return {
+        success: true,
+        nodes: this.parseListOutput(stdout)
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        nodes: []
+      };
+    }
+  }
+
+  /**
+   * Создание новой ноды
+   */
+  async createNode(nodeId, config = {}) {
+    try {
+      const configStr = JSON.stringify(config);
+      const { stdout } = await execAsync(`${this.cliPath} create --node-id ${nodeId} --config '${configStr}'`);
+      
+      return {
+        success: true,
+        message: 'Node created successfully',
+        output: stdout
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Удаление ноды
+   */
+  async deleteNode(nodeId) {
+    try {
+      const { stdout } = await execAsync(`${this.cliPath} delete --node-id ${nodeId}`);
+      
+      return {
+        success: true,
+        message: 'Node deleted successfully',
+        output: stdout
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Получение информации о ноде
+   */
+  async getNodeInfo(nodeId) {
+    try {
+      const { stdout } = await execAsync(`${this.cliPath} info --node-id ${nodeId}`);
+      
+      return {
+        success: true,
+        info: this.parseInfoOutput(stdout)
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        info: null
+      };
+    }
+  }
+
+  /**
+   * Парсинг вывода команды list
+   */
+  parseListOutput(output) {
+    const lines = output.split('\n').filter(line => line.trim());
+    const nodes = [];
+    
+    for (const line of lines) {
+      // Пример вывода: "node_123 (running) - 127.0.0.1:8080"
+      const match = line.match(/^(\w+)\s+\((\w+)\)\s*-\s*(.+)$/);
+      if (match) {
+        nodes.push({
+          id: match[1],
+          status: match[2],
+          address: match[3]
+        });
+      }
+    }
+    
+    return nodes;
+  }
+
+  /**
+   * Парсинг вывода команды info
+   */
+  parseInfoOutput(output) {
+    const lines = output.split('\n').filter(line => line.trim());
+    const info = {};
+    
+    for (const line of lines) {
+      const [key, value] = line.split(':').map(s => s.trim());
+      if (key && value) {
+        info[key.toLowerCase().replace(/\s+/g, '_')] = value;
+      }
+    }
+    
+    return info;
   }
 
   /**
