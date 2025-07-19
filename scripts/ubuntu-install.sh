@@ -165,6 +165,11 @@ if [[ $INSTALL_NEXUS_CLI =~ ^[Yy]$ ]]; then
         # Установка Nexus CLI из GitHub
         print_info "Установка Nexus CLI из GitHub"
         cd /tmp
+        # Удаляем существующую папку если она есть
+        if [ -d "nexus-cli" ]; then
+            print_info "Удаление существующей папки nexus-cli..."
+            rm -rf nexus-cli
+        fi
         git clone https://github.com/nexus-xyz/nexus-cli.git
         cd nexus-cli
         cargo build --release
@@ -183,6 +188,11 @@ if [[ $INSTALL_NEXUS_CLI =~ ^[Yy]$ ]]; then
             # Установка Nexus CLI из GitHub
             print_info "Установка Nexus CLI из GitHub"
             cd /tmp
+            # Удаляем существующую папку если она есть
+            if [ -d "nexus-cli" ]; then
+                print_info "Удаление существующей папки nexus-cli..."
+                rm -rf nexus-cli
+            fi
             git clone https://github.com/nexus-xyz/nexus-cli.git
             cd nexus-cli
             sudo -u $REAL_USER bash -c 'cargo build --release'
