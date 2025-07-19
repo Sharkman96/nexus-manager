@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "build": "echo 'Backend is ready to run'",
     "test": "jest",
     "db:migrate": "node src/database/migrate.js"
   },

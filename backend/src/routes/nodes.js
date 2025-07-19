@@ -36,202 +36,6 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * GET /api/nodes/:id - Получение информации о конкретном узле
- */
-router.get('/:id', async (req, res) => {
-  try {
-    const nodeId = parseInt(req.params.id);
-    const node = await req.db.getNode(nodeId);
-    
-    if (!node) {
-      return res.status(404).json({
-        success: false,
-        error: 'Node not found'
-      });
-    }
-    
-    // Получение дополнительной информации
-    const [cliStatus, latestMetrics, recentTransactions] = await Promise.all([
-      req.nexusCLI.getNodeStatus(node.prover_id),
-      req.db.getLatestMetrics(nodeId),
-      req.db.getTransactions(nodeId, 10)
-    ]);
-    
-    const enrichedNode = {
-      ...node,
-      config: node.config ? JSON.parse(node.config) : {},
-      cli_status: cliStatus,
-      latest_metrics: latestMetrics,
-      recent_transactions: recentTransactions
-    };
-    
-    res.json({
-      success: true,
-      data: enrichedNode
-    });
-  } catch (error) {
-    console.error('❌ Error getting node:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-/**
- * POST /api/nodes - Создание нового узла
- */
-router.post('/', async (req, res) => {
-  try {
-    const { prover_id, name, config } = req.body;
-    
-    if (!prover_id || !name) {
-      return res.status(400).json({
-        success: false,
-        error: 'prover_id and name are required'
-      });
-    }
-    
-    // Проверка на дублирование
-    const existingNode = await req.db.getNodeByProverId(prover_id);
-    if (existingNode) {
-      return res.status(400).json({
-        success: false,
-        error: 'Node with this prover_id already exists'
-      });
-    }
-    
-    const nodeData = {
-      prover_id,
-      name,
-      config: config || {}
-    };
-    
-    const result = await req.db.createNode(nodeData);
-    const newNode = await req.db.getNode(result.id);
-    
-    // Уведомление через WebSocket
-    req.wsClients.forEach(client => {
-      if (client.readyState === 1) {
-        client.send(JSON.stringify({
-          type: 'nodeCreated',
-          data: newNode,
-          timestamp: new Date().toISOString()
-        }));
-      }
-    });
-    
-    res.status(201).json({
-      success: true,
-      data: newNode,
-      message: 'Node created successfully'
-    });
-  } catch (error) {
-    console.error('❌ Error creating node:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-/**
- * PUT /api/nodes/:id - Обновление узла
- */
-router.put('/:id', async (req, res) => {
-  try {
-    const nodeId = parseInt(req.params.id);
-    const updates = req.body;
-    
-    const node = await req.db.getNode(nodeId);
-    if (!node) {
-      return res.status(404).json({
-        success: false,
-        error: 'Node not found'
-      });
-    }
-    
-    // Подготовка обновлений
-    const updateData = {};
-    if (updates.name) updateData.name = updates.name;
-    if (updates.config) updateData.config = JSON.stringify(updates.config);
-    if (updates.status) updateData.status = updates.status;
-    
-    await req.db.updateNode(nodeId, updateData);
-    const updatedNode = await req.db.getNode(nodeId);
-    
-    // Уведомление через WebSocket
-    req.wsClients.forEach(client => {
-      if (client.readyState === 1) {
-        client.send(JSON.stringify({
-          type: 'nodeUpdated',
-          data: updatedNode,
-          timestamp: new Date().toISOString()
-        }));
-      }
-    });
-    
-    res.json({
-      success: true,
-      data: updatedNode,
-      message: 'Node updated successfully'
-    });
-  } catch (error) {
-    console.error('❌ Error updating node:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-/**
- * DELETE /api/nodes/:id - Удаление узла
- */
-router.delete('/:id', async (req, res) => {
-  try {
-    const nodeId = parseInt(req.params.id);
-    const node = await req.db.getNode(nodeId);
-    
-    if (!node) {
-      return res.status(404).json({
-        success: false,
-        error: 'Node not found'
-      });
-    }
-    
-    // Остановка узла если он запущен
-    if (node.status === 'running') {
-      await req.nexusCLI.stopNode(node.prover_id);
-    }
-    
-    await req.db.deleteNode(nodeId);
-    
-    // Уведомление через WebSocket
-    req.wsClients.forEach(client => {
-      if (client.readyState === 1) {
-        client.send(JSON.stringify({
-          type: 'nodeDeleted',
-          data: { id: nodeId, prover_id: node.prover_id },
-          timestamp: new Date().toISOString()
-        }));
-      }
-    });
-    
-    res.json({
-      success: true,
-      message: 'Node deleted successfully'
-    });
-  } catch (error) {
-    console.error('❌ Error deleting node:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-/**
  * POST /api/nodes/:id/start - Запуск узла
  */
 router.post('/:id/start', async (req, res) => {
@@ -438,6 +242,202 @@ router.get('/:id/logs', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error getting node logs:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/nodes/:id - Получение информации о конкретном узле
+ */
+router.get('/:id', async (req, res) => {
+  try {
+    const nodeId = parseInt(req.params.id);
+    const node = await req.db.getNode(nodeId);
+    
+    if (!node) {
+      return res.status(404).json({
+        success: false,
+        error: 'Node not found'
+      });
+    }
+    
+    // Получение дополнительной информации
+    const [cliStatus, latestMetrics, recentTransactions] = await Promise.all([
+      req.nexusCLI.getNodeStatus(node.prover_id),
+      req.db.getLatestMetrics(nodeId),
+      req.db.getTransactions(nodeId, 10)
+    ]);
+    
+    const enrichedNode = {
+      ...node,
+      config: node.config ? JSON.parse(node.config) : {},
+      cli_status: cliStatus,
+      latest_metrics: latestMetrics,
+      recent_transactions: recentTransactions
+    };
+    
+    res.json({
+      success: true,
+      data: enrichedNode
+    });
+  } catch (error) {
+    console.error('❌ Error getting node:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/nodes - Создание нового узла
+ */
+router.post('/', async (req, res) => {
+  try {
+    const { prover_id, name, config } = req.body;
+    
+    if (!prover_id || !name) {
+      return res.status(400).json({
+        success: false,
+        error: 'prover_id and name are required'
+      });
+    }
+    
+    // Проверка на дублирование
+    const existingNode = await req.db.getNodeByProverId(prover_id);
+    if (existingNode) {
+      return res.status(400).json({
+        success: false,
+        error: 'Node with this prover_id already exists'
+      });
+    }
+    
+    const nodeData = {
+      prover_id,
+      name,
+      config: config || {}
+    };
+    
+    const result = await req.db.createNode(nodeData);
+    const newNode = await req.db.getNode(result.id);
+    
+    // Уведомление через WebSocket
+    req.wsClients.forEach(client => {
+      if (client.readyState === 1) {
+        client.send(JSON.stringify({
+          type: 'nodeCreated',
+          data: newNode,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+    
+    res.status(201).json({
+      success: true,
+      data: newNode,
+      message: 'Node created successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error creating node:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * PUT /api/nodes/:id - Обновление узла
+ */
+router.put('/:id', async (req, res) => {
+  try {
+    const nodeId = parseInt(req.params.id);
+    const updates = req.body;
+    
+    const node = await req.db.getNode(nodeId);
+    if (!node) {
+      return res.status(404).json({
+        success: false,
+        error: 'Node not found'
+      });
+    }
+    
+    // Подготовка обновлений
+    const updateData = {};
+    if (updates.name) updateData.name = updates.name;
+    if (updates.config) updateData.config = JSON.stringify(updates.config);
+    if (updates.status) updateData.status = updates.status;
+    
+    await req.db.updateNode(nodeId, updateData);
+    const updatedNode = await req.db.getNode(nodeId);
+    
+    // Уведомление через WebSocket
+    req.wsClients.forEach(client => {
+      if (client.readyState === 1) {
+        client.send(JSON.stringify({
+          type: 'nodeUpdated',
+          data: updatedNode,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+    
+    res.json({
+      success: true,
+      data: updatedNode,
+      message: 'Node updated successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error updating node:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/nodes/:id - Удаление узла
+ */
+router.delete('/:id', async (req, res) => {
+  try {
+    const nodeId = parseInt(req.params.id);
+    const node = await req.db.getNode(nodeId);
+    
+    if (!node) {
+      return res.status(404).json({
+        success: false,
+        error: 'Node not found'
+      });
+    }
+    
+    // Остановка узла если он запущен
+    if (node.status === 'running') {
+      await req.nexusCLI.stopNode(node.prover_id);
+    }
+    
+    await req.db.deleteNode(nodeId);
+    
+    // Уведомление через WebSocket
+    req.wsClients.forEach(client => {
+      if (client.readyState === 1) {
+        client.send(JSON.stringify({
+          type: 'nodeDeleted',
+          data: { id: nodeId, prover_id: node.prover_id },
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+    
+    res.json({
+      success: true,
+      message: 'Node deleted successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error deleting node:', error);
     res.status(500).json({
       success: false,
       error: error.message
