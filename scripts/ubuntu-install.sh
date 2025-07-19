@@ -293,26 +293,38 @@ EOF
 fi
 
 print_header "Подготовка проекта"
+
+# Сохраняем исходную директорию
+ORIGINAL_DIR=$(pwd)
+print_info "Исходная директория: $ORIGINAL_DIR"
+
 # Проверка что проект уже клонирован
-if [ ! -d "$(pwd)/nexus-manager" ] && [ ! -d "$(pwd)/nexus" ] && [ ! -d "/opt/nexus-manager" ] && [ ! -d "$(dirname $(pwd))/nexus-manager" ] && [ ! -d "$(dirname $(pwd))/nexus" ]; then
+print_info "Поиск проекта в:"
+print_info "  - $ORIGINAL_DIR/nexus-manager"
+print_info "  - $ORIGINAL_DIR/nexus"
+print_info "  - /opt/nexus-manager"
+print_info "  - $(dirname $ORIGINAL_DIR)/nexus-manager"
+print_info "  - $(dirname $ORIGINAL_DIR)/nexus"
+
+if [ ! -d "$ORIGINAL_DIR/nexus-manager" ] && [ ! -d "$ORIGINAL_DIR/nexus" ] && [ ! -d "/opt/nexus-manager" ] && [ ! -d "$(dirname $ORIGINAL_DIR)/nexus-manager" ] && [ ! -d "$(dirname $ORIGINAL_DIR)/nexus" ]; then
     print_error "Проект не найден. Клонируйте проект сначала:"
-print_info "git clone https://github.com/Sharkman96/nexus-manager.git"
-print_info "cd nexus-manager"
-print_info "Или используйте существующую папку: nexus или nexus-manager"
+    print_info "git clone https://github.com/Sharkman96/nexus-manager.git"
+    print_info "cd nexus-manager"
+    print_info "Или используйте существующую папку: nexus или nexus-manager"
     print_info "Затем запустите скрипт снова"
     exit 1
 fi
 
 # Копирование файлов в /opt
 run_cmd mkdir -p /opt/nexus-manager
-if [ -d "$(pwd)/nexus-manager" ]; then
-    cp -r $(pwd)/nexus-manager/* /opt/nexus-manager/
-elif [ -d "$(pwd)/nexus" ]; then
-    cp -r $(pwd)/nexus/* /opt/nexus-manager/
-elif [ -d "$(dirname $(pwd))/nexus-manager" ]; then
-    cp -r $(dirname $(pwd))/nexus-manager/* /opt/nexus-manager/
-elif [ -d "$(dirname $(pwd))/nexus" ]; then
-    cp -r $(dirname $(pwd))/nexus/* /opt/nexus-manager/
+if [ -d "$ORIGINAL_DIR/nexus-manager" ]; then
+    cp -r $ORIGINAL_DIR/nexus-manager/* /opt/nexus-manager/
+elif [ -d "$ORIGINAL_DIR/nexus" ]; then
+    cp -r $ORIGINAL_DIR/nexus/* /opt/nexus-manager/
+elif [ -d "$(dirname $ORIGINAL_DIR)/nexus-manager" ]; then
+    cp -r $(dirname $ORIGINAL_DIR)/nexus-manager/* /opt/nexus-manager/
+elif [ -d "$(dirname $ORIGINAL_DIR)/nexus" ]; then
+    cp -r $(dirname $ORIGINAL_DIR)/nexus/* /opt/nexus-manager/
 elif [ -d "/opt/nexus-manager" ]; then
     print_info "Проект уже скопирован в /opt/nexus-manager"
 else
