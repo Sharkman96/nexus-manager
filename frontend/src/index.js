@@ -53,7 +53,7 @@ root.render(
             },
           }}
         />
-        {process.env.NODE_ENV === 'development' && (
+        {false && (
           <ReactQueryDevtools initialIsOpen={false} />
         )}
       </BrowserRouter>
@@ -62,7 +62,7 @@ root.render(
 );
 
 // Отчеты о производительности
-if (process.env.NODE_ENV === 'production') {
+if (true) {
   import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
     getCLS(console.log);
     getFID(console.log);
