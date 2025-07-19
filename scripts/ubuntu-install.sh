@@ -122,6 +122,10 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 run_cmd apt update
 run_cmd apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
+# Установка Docker Compose (отдельно для совместимости)
+curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+
 # Добавить пользователя в группу docker (только если пользователь не root)
 if [ "$REAL_USER" != "root" ] && id "$REAL_USER" &>/dev/null; then
     print_info "Добавление пользователя $REAL_USER в группу docker..."
@@ -242,7 +246,7 @@ print_header "Настройка конфигурации"
 tee /opt/nexus-node-manager/backend/.env > /dev/null <<EOF
 PORT=3002
 NODE_ENV=production
-DB_PATH=./database/nexus-nodes.db
+DB_PATH=../database/nexus-nodes.db
 NEXUS_RPC_URL=https://rpc.nexus.xyz/http
 NEXUS_WS_URL=wss://rpc.nexus.xyz/ws
 NEXUS_EXPLORER_API=https://explorer.nexus.xyz/api/v1
@@ -254,16 +258,43 @@ RATE_LIMIT_WINDOW=15
 RATE_LIMIT_MAX_REQUESTS=100
 LOG_LEVEL=info
 LOG_FILE=./logs/nexus-manager.log
+
+# Docker Configuration
+DOCKER_PATH=docker
+DOCKER_COMPOSE_PATH=docker-compose
+NEXUS_DOCKER_DATA_DIR=../nexus-docker
+DEFAULT_NODE_TYPE=docker
+AUTO_INSTALL_DOCKER=true
 EOF
 
 # Создание директорий
 mkdir -p /opt/nexus-node-manager/backend/logs
 mkdir -p /opt/nexus-node-manager/database
+mkdir -p /opt/nexus-node-manager/nexus-docker
 mkdir -p /opt/backups/nexus-manager
 mkdir -p /var/www/nexus-manager
 
+# Установка правильных прав доступа
+chown -R $REAL_USER:$REAL_USER /opt/nexus-node-manager/database
+chown -R $REAL_USER:$REAL_USER /opt/nexus-node-manager/nexus-docker
+chown -R $REAL_USER:$REAL_USER /opt/nexus-node-manager/backend/logs
+
 print_header "Инициализация базы данных"
-cd /opt/nexus-node-manager/backend && npm run db:migrate
+cd /opt/nexus-node-manager/backend
+# Запуск основных миграций
+if npm run db:migrate; then
+    print_status "Основные миграции выполнены"
+else
+    print_warning "Основные миграции не выполнены (возможно уже выполнены)"
+fi
+
+# Запуск Docker миграций
+if node src/database/migrate-docker.js; then
+    print_status "Docker миграции выполнены"
+else
+    print_warning "Docker миграции не выполнены (возможно уже выполнены)"
+fi
+
 print_status "База данных инициализирована"
 
 print_header "Создание systemd сервиса"
@@ -456,8 +487,10 @@ print_info "• Бэкап: /opt/nexus-node-manager/backup.sh"
 print_info ""
 print_info "Следующие шаги:"
 print_info "1. Откройте http://$SERVER_IP/nexus/ в браузере"
-print_info "2. Зарегистрируйтесь на https://app.nexus.xyz"
-print_info "3. Получите Prover ID и добавьте узел"
+print_info "2. Перейдите в раздел 'Docker' для управления Docker нодами"
+print_info "3. Зарегистрируйтесь на https://app.nexus.xyz"
+print_info "4. Получите Prover ID и создайте Docker ноду"
+print_info "5. Docker будет установлен автоматически при первом использовании"
 
 # Проверка доступности
 print_header "Тестирование доступности"

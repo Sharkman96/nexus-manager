@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, Server, BarChart3, Bell, Settings, Menu, X } from 'lucide-react';
+import { Activity, Server, BarChart3, Bell, Settings, Menu, X, Package } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: Activity },
   { to: '/nodes', label: 'Nodes', icon: Server },
+  { to: '/docker', label: 'Docker', icon: Package },
   { to: '/metrics', label: 'Metrics', icon: BarChart3 },
   { to: '/notifications', label: 'Notifications', icon: Bell },
   { to: '/settings', label: 'Settings', icon: Settings },

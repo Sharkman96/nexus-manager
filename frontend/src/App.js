@@ -7,6 +7,7 @@ import { NodeDetailPage } from './pages/NodeDetailPage';
 import { MetricsPage } from './pages/MetricsPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import DockerPage from './pages/DockerPage';
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -19,6 +20,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/nodes" element={<NodesPage />} />
             <Route path="/nodes/:id" element={<NodeDetailPage />} />
+            <Route path="/docker" element={<DockerPage />} />
             <Route path="/metrics" element={<MetricsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/settings" element={<SettingsPage />} />

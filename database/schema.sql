@@ -8,7 +8,10 @@ CREATE TABLE IF NOT EXISTS nodes (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_seen DATETIME,
     config TEXT, -- JSON конфигурация
-    errors TEXT -- последние ошибки
+    errors TEXT, -- последние ошибки
+    node_type TEXT DEFAULT 'cli', -- cli, docker
+    container_name TEXT, -- имя Docker контейнера
+    container_id TEXT -- ID Docker контейнера
 );
 
 -- Метрики производительности

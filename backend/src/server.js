@@ -11,12 +11,15 @@ const path = require('path');
 const config = require('../config');
 const Database = require('./database/db');
 const DatabaseMigration = require('./database/migrate');
+const DockerMigration = require('./database/migrate-docker');
 const NexusCLI = require('./services/nexus-cli');
+const NexusDocker = require('./services/nexus-docker');
 const NexusRPC = require('./services/nexus-rpc');
 const SystemMonitor = require('./services/system-monitor');
 
 // Импорт роутов
 const nodeRoutes = require('./routes/nodes');
+const dockerRoutes = require('./routes/docker');
 const metricsRoutes = require('./routes/metrics');
 const systemRoutes = require('./routes/system');
 const notificationRoutes = require('./routes/notifications');
@@ -30,6 +33,7 @@ class NexusNodeManager {
     // Сервисы
     this.db = new Database();
     this.nexusCLI = new NexusCLI();
+    this.nexusDocker = new NexusDocker();
     this.nexusRPC = new NexusRPC();
     this.systemMonitor = new SystemMonitor();
     
@@ -73,9 +77,13 @@ class NexusNodeManager {
   async initDatabase() {
     console.log('📦 Initializing database...');
     
-    // Выполнение миграций
+    // Выполнение основных миграций
     const migration = new DatabaseMigration();
     await migration.init();
+    
+    // Выполнение Docker миграций
+    const dockerMigration = new DockerMigration();
+    await dockerMigration.init();
     
     // Подключение к базе данных
     await this.db.connect();
@@ -124,6 +132,7 @@ class NexusNodeManager {
     this.app.use((req, res, next) => {
       req.db = this.db;
       req.nexusCLI = this.nexusCLI;
+      req.nexusDocker = this.nexusDocker;
       req.nexusRPC = this.nexusRPC;
       req.systemMonitor = this.systemMonitor;
       req.wsClients = this.wsClients;
@@ -132,6 +141,7 @@ class NexusNodeManager {
     
     // API роуты
     this.app.use('/api/nodes', nodeRoutes);
+    this.app.use('/api/docker', dockerRoutes);
     this.app.use('/api/metrics', metricsRoutes);
     this.app.use('/api/system', systemRoutes);
     this.app.use('/api/notifications', notificationRoutes);
@@ -144,6 +154,7 @@ class NexusNodeManager {
         status: 'running',
         endpoints: {
           nodes: '/api/nodes',
+          docker: '/api/docker',
           metrics: '/api/metrics',
           system: '/api/system',
           notifications: '/api/notifications',

@@ -6,7 +6,7 @@ const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
 
   // Database
-  dbPath: process.env.DB_PATH || './database/nexus-nodes.db',
+  dbPath: process.env.DB_PATH || '../database/nexus-nodes.db',
 
   // Nexus Network Configuration
   nexus: {
@@ -15,6 +15,15 @@ const config = {
     explorerApi: process.env.NEXUS_EXPLORER_API || 'https://explorer.nexus.xyz/api/v1',
     defaultProverId: process.env.DEFAULT_PROVER_ID || '',
     cliPath: process.env.NEXUS_CLI_PATH || 'nexus-cli'
+  },
+
+  // Docker Configuration
+  docker: {
+    dockerPath: process.env.DOCKER_PATH || 'docker',
+    dockerComposePath: process.env.DOCKER_COMPOSE_PATH || 'docker-compose',
+    nexusDataDir: process.env.NEXUS_DOCKER_DATA_DIR || '../nexus-docker',
+    defaultNodeType: process.env.DEFAULT_NODE_TYPE || 'docker', // 'docker' or 'cli'
+    autoInstallDocker: process.env.AUTO_INSTALL_DOCKER === 'true' || false
   },
 
   // Monitoring Configuration

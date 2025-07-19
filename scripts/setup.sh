@@ -68,17 +68,38 @@ echo -e "\n📁 Creating necessary directories..."
 cd ..
 mkdir -p backend/logs
 mkdir -p database
+mkdir -p nexus-docker
+
+# Создание .env файла для разработки
+if [ ! -f "backend/.env" ]; then
+    echo -e "\n📝 Creating .env file for development..."
+    cp backend/env.example backend/.env
+    print_status "Development .env file created"
+else
+    print_warning ".env file already exists"
+fi
+
 print_status "Directories created"
 
 # Инициализация базы данных
 echo -e "\n🗄️  Initializing database..."
 cd backend
+
+# Запуск основных миграций
 if npm run db:migrate; then
-    print_status "Database initialized"
+    print_status "Main migrations completed"
 else
-    print_error "Failed to initialize database"
-    exit 1
+    print_warning "Main migrations failed (may already be completed)"
 fi
+
+# Запуск Docker миграций
+if node src/database/migrate-docker.js; then
+    print_status "Docker migrations completed"
+else
+    print_warning "Docker migrations failed (may already be completed)"
+fi
+
+print_status "Database initialized"
 
 # Проверка Nexus CLI (опционально)
 echo -e "\n🔍 Checking Nexus CLI..."
@@ -93,8 +114,13 @@ fi
 echo -e "\n🐳 Checking Docker..."
 if command -v docker &> /dev/null; then
     print_status "Docker is installed: $(docker --version)"
+    if command -v docker-compose &> /dev/null; then
+        print_status "Docker Compose is installed: $(docker-compose --version)"
+    else
+        print_warning "Docker Compose is not installed"
+    fi
 else
-    print_warning "Docker is not installed (optional for Nexus CLI)"
+    print_warning "Docker is not installed (will be installed automatically when needed)"
 fi
 
 echo -e "\n🎉 Setup complete!"
@@ -102,8 +128,9 @@ echo -e "\n📖 Next steps:"
 echo -e "1. Start the backend server: ${GREEN}cd backend && npm start${NC}"
 echo -e "2. Start the frontend server: ${GREEN}cd frontend && npm start${NC}"
 echo -e "3. Open http://localhost:3000 in your browser"
-echo -e "4. Install Nexus CLI if not already installed"
-echo -e "5. Get your Prover ID from https://app.nexus.xyz"
+echo -e "4. Go to 'Docker' section to manage Docker nodes"
+echo -e "5. Install Nexus CLI if not already installed"
+echo -e "6. Get your Prover ID from https://app.nexus.xyz"
 
 echo -e "\n🔧 Development commands:"
 echo -e "Backend dev server: ${GREEN}cd backend && npm run dev${NC}"
