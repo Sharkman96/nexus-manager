@@ -242,8 +242,10 @@ chmod -R 755 /var/www/nexus-manager/
 print_status "Frontend собран и скопирован"
 
 print_header "Настройка конфигурации"
-# Создание .env файла
-tee /opt/nexus-node-manager/backend/.env > /dev/null <<EOF
+# Создание .env файла автоматически
+if [ ! -f "/opt/nexus-node-manager/backend/.env" ]; then
+    print_info "Создание .env файла..."
+    tee /opt/nexus-node-manager/backend/.env > /dev/null <<EOF
 PORT=3002
 NODE_ENV=production
 DB_PATH=../database/nexus-nodes.db
@@ -266,6 +268,10 @@ NEXUS_DOCKER_DATA_DIR=../nexus-docker
 DEFAULT_NODE_TYPE=docker
 AUTO_INSTALL_DOCKER=true
 EOF
+    print_status ".env файл создан автоматически"
+else
+    print_info ".env файл уже существует, пропускаем создание"
+fi
 
 # Создание директорий
 mkdir -p /opt/nexus-node-manager/backend/logs

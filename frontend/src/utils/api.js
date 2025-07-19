@@ -31,10 +31,10 @@ api.interceptors.response.use(
   (error) => {
     console.error('API Response Error:', error);
     
-    if (error.response?.status === 401) {
-      // Обработка неавторизованного доступа
-      window.location.href = '/login';
-    }
+    // Убираем редирект на login - авторизация не требуется
+    // if (error.response?.status === 401) {
+    //   window.location.href = '/login';
+    // }
     
     return Promise.reject(error);
   }

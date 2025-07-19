@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Button, Progress, Alert, Modal, Form } from 'react-bootstrap';
 import { 
-  PlayFill, 
-  StopFill, 
-  GearFill, 
-  TrashFill, 
-  ArrowClockwise,
-  BoxArrowUpRight,
-  ExclamationTriangle,
+  Play, 
+  Square, 
+  Settings, 
+  Trash2, 
+  RotateCcw,
+  ExternalLink,
+  AlertTriangle,
   CheckCircle,
   XCircle
-} from 'react-bootstrap-icons';
+} from 'react-icons/fi';
 
 const DockerNodeCard = ({ node, onUpdate, onDelete }) => {
   const [status, setStatus] = useState(node.status || 'stopped');
@@ -128,199 +127,207 @@ const DockerNodeCard = ({ node, onUpdate, onDelete }) => {
   };
 
   const getStatusBadge = () => {
+    const baseClasses = "px-2 py-1 text-xs font-medium rounded-full";
     switch (status) {
       case 'running':
-        return <Badge bg="success">Running</Badge>;
+        return <span className={`${baseClasses} bg-green-100 text-green-800`}>Running</span>;
       case 'stopped':
-        return <Badge bg="secondary">Stopped</Badge>;
+        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>Stopped</span>;
       case 'starting':
-        return <Badge bg="warning">Starting</Badge>;
+        return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>Starting</span>;
       case 'error':
-        return <Badge bg="danger">Error</Badge>;
+        return <span className={`${baseClasses} bg-red-100 text-red-800`}>Error</span>;
       default:
-        return <Badge bg="secondary">Unknown</Badge>;
+        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>Unknown</span>;
     }
   };
 
   const getStatusIcon = () => {
+    const iconClasses = "w-5 h-5";
     switch (status) {
       case 'running':
-        return <CheckCircle className="text-success" />;
+        return <CheckCircle className={`${iconClasses} text-green-500`} />;
       case 'stopped':
-        return <XCircle className="text-secondary" />;
+        return <XCircle className={`${iconClasses} text-gray-500`} />;
       case 'starting':
-        return <ArrowClockwise className="text-warning" />;
+        return <RotateCcw className={`${iconClasses} text-yellow-500 animate-spin`} />;
       case 'error':
-        return <ExclamationTriangle className="text-danger" />;
+        return <AlertTriangle className={`${iconClasses} text-red-500`} />;
       default:
-        return <XCircle className="text-secondary" />;
+        return <XCircle className={`${iconClasses} text-gray-500`} />;
     }
   };
 
   return (
     <>
-      <Card className="mb-3 docker-node-card">
-        <Card.Header className="d-flex justify-content-between align-items-center">
-          <div className="d-flex align-items-center">
+      <div className="bg-white rounded-lg shadow-md mb-4 border border-gray-200">
+        <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
             {getStatusIcon()}
-            <span className="ms-2 fw-bold">{node.name}</span>
+            <span className="font-semibold text-gray-900">{node.name}</span>
             {getStatusBadge()}
           </div>
-          <div className="btn-group">
-            <Button
-              size="sm"
-              variant="outline-primary"
+          <div className="flex space-x-2">
+            <button
+              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
               onClick={() => setShowLogs(true)}
               disabled={loading}
             >
-              <BoxArrowUpRight />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline-warning"
+              <ExternalLink className="w-4 h-4" />
+            </button>
+            <button
+              className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors"
               onClick={() => setShowRebuild(true)}
               disabled={loading}
             >
-              <ArrowClockwise />
-            </Button>
+              <RotateCcw className="w-4 h-4" />
+            </button>
           </div>
-        </Card.Header>
+        </div>
 
-        <Card.Body>
-          <div className="row">
-            <div className="col-md-6">
-              <p><strong>Prover ID:</strong> {node.prover_id}</p>
-              <p><strong>Container:</strong> {node.container_name || 'N/A'}</p>
-              <p><strong>Type:</strong> <Badge bg="info">Docker</Badge></p>
+        <div className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-gray-600"><span className="font-medium">Prover ID:</span> {node.prover_id}</p>
+              <p className="text-sm text-gray-600"><span className="font-medium">Container:</span> {node.container_name || 'N/A'}</p>
+              <p className="text-sm text-gray-600"><span className="font-medium">Type:</span> <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Docker</span></p>
             </div>
-            <div className="col-md-6">
+            <div>
               {metrics && (
                 <>
-                  <p><strong>Uptime:</strong> {metrics.uptime}</p>
-                  <p><strong>CPU:</strong> {metrics.cpu_usage || 'N/A'}</p>
-                  <p><strong>Memory:</strong> {metrics.memory_usage || 'N/A'}</p>
+                  <p className="text-sm text-gray-600"><span className="font-medium">Uptime:</span> {metrics.uptime}</p>
+                  <p className="text-sm text-gray-600"><span className="font-medium">CPU:</span> {metrics.cpu_usage || 'N/A'}</p>
+                  <p className="text-sm text-gray-600"><span className="font-medium">Memory:</span> {metrics.memory_usage || 'N/A'}</p>
+                  <p className="text-sm text-gray-600"><span className="font-medium">Network:</span> {metrics.network_usage || 'N/A'}</p>
                 </>
               )}
             </div>
           </div>
 
           {error && (
-            <Alert variant="danger" className="mt-2">
-              {error}
-            </Alert>
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
           )}
 
-          <div className="d-flex justify-content-between mt-3">
-            <div className="btn-group">
-              <Button
-                variant="success"
-                size="sm"
-                onClick={() => handleAction('start')}
-                disabled={loading || status === 'running'}
+          <div className="mt-4 flex space-x-2">
+            <button
+              onClick={() => handleAction('start')}
+              disabled={loading || status === 'running'}
+              className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Play className="w-4 h-4" />
+              <span>Start</span>
+            </button>
+            <button
+              onClick={() => handleAction('stop')}
+              disabled={loading || status === 'stopped'}
+              className="flex items-center space-x-1 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Square className="w-4 h-4" />
+              <span>Stop</span>
+            </button>
+            <button
+              onClick={() => onDelete(node.id)}
+              disabled={loading}
+              className="flex items-center space-x-1 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Logs Modal */}
+      {showLogs && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-96 overflow-hidden">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Logs - {node.name}</h3>
+              <button
+                onClick={() => setShowLogs(false)}
+                className="text-gray-500 hover:text-gray-700"
               >
-                <PlayFill /> Start
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => handleAction('stop')}
-                disabled={loading || status === 'stopped'}
-              >
-                <StopFill /> Stop
-              </Button>
+                <XCircle className="w-6 h-6" />
+              </button>
             </div>
-            
-            <div className="btn-group">
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                onClick={() => onDelete && onDelete(node.id)}
+            <div className="bg-gray-900 text-green-400 p-4 rounded-md h-64 overflow-y-auto font-mono text-sm">
+              {logs.length > 0 ? (
+                logs.map((log, index) => (
+                  <div key={index} className="mb-1">{log}</div>
+                ))
+              ) : (
+                <div>No logs available</div>
+              )}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setShowLogs(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rebuild Modal */}
+      {showRebuild && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Rebuild Node</h3>
+              <button
+                onClick={() => setShowRebuild(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={rebuildOptions.rebuild}
+                    onChange={(e) => setRebuildOptions({...rebuildOptions, rebuild: e.target.checked})}
+                    className="mr-2"
+                  />
+                  <span>Rebuild container</span>
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Container Name
+                </label>
+                <input
+                  type="text"
+                  value={rebuildOptions.containerName}
+                  onChange={(e) => setRebuildOptions({...rebuildOptions, containerName: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end space-x-2">
+              <button
+                onClick={() => setShowRebuild(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRebuild}
                 disabled={loading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <TrashFill /> Delete
-              </Button>
+                {loading ? 'Rebuilding...' : 'Rebuild'}
+              </button>
             </div>
           </div>
-
-          {loading && (
-            <div className="mt-3">
-              <Progress animated now={100} />
-            </div>
-          )}
-        </Card.Body>
-      </Card>
-
-      {/* Модальное окно для логов */}
-      <Modal show={showLogs} onHide={() => setShowLogs(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Docker Logs - {node.name}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div className="logs-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            {logs.length > 0 ? (
-              logs.map((log, index) => (
-                <div key={index} className="log-line">
-                  <code>{log}</code>
-                </div>
-              ))
-            ) : (
-              <p>No logs available</p>
-            )}
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowLogs(false)}>
-            Close
-          </Button>
-          <Button variant="primary" onClick={fetchLogs}>
-            Refresh Logs
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Модальное окно для пересборки */}
-      <Modal show={showRebuild} onHide={() => setShowRebuild(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Rebuild Docker Node - {node.name}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group className="mb-3">
-              <Form.Label>Container Name</Form.Label>
-              <Form.Control
-                type="text"
-                value={rebuildOptions.containerName}
-                onChange={(e) => setRebuildOptions({
-                  ...rebuildOptions,
-                  containerName: e.target.value
-                })}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Check
-                type="checkbox"
-                label="Rebuild image"
-                checked={rebuildOptions.rebuild}
-                onChange={(e) => setRebuildOptions({
-                  ...rebuildOptions,
-                  rebuild: e.target.checked
-                })}
-              />
-            </Form.Group>
-          </Form>
-          <Alert variant="warning">
-            <ExclamationTriangle /> This will stop the current node, rebuild the Docker image, and restart it.
-          </Alert>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowRebuild(false)}>
-            Cancel
-          </Button>
-          <Button variant="warning" onClick={handleRebuild} disabled={loading}>
-            {loading ? 'Rebuilding...' : 'Rebuild & Restart'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+        </div>
+      )}
     </>
   );
 };
