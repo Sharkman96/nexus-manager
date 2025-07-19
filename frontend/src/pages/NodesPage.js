@@ -20,7 +20,12 @@ export const NodesPage = () => {
     staleTime: 10000
   });
 
-  const nodes = nodesData?.data || [];
+  // Добавляем логирование для отладки
+  console.log('NodesPage - nodesData:', nodesData);
+  
+  const nodes = Array.isArray(nodesData?.data) ? nodesData.data : (Array.isArray(nodesData) ? nodesData : []);
+  
+  console.log('NodesPage - processed nodes:', nodes);
 
   const handleNodeCreated = (newNode) => {
     queryClient.invalidateQueries('nodes');
