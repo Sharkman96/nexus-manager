@@ -102,7 +102,7 @@ print_status "Система обновлена"
 
 print_header "Установка базовых пакетов"
 run_cmd apt install -y curl wget git build-essential software-properties-common \
-    ufw nginx htop unzip
+    ufw nginx htop unzip net-tools
 print_status "Базовые пакеты установлены"
 
 print_header "Установка Node.js 18.x"
@@ -466,10 +466,10 @@ else
 fi
 
 # Проверка портов
-if netstat -tlpn | grep -q ":3001"; then
-    print_status "API сервер слушает порт 3001"
+if ss -tlpn | grep -q ":3002"; then
+  print_status "API сервер слушает порт 3002"
 else
-    print_warning "API сервер не слушает порт 3001"
+  print_warning "API сервер не слушает порт 3002"
 fi
 
 # Проверка Nginx
