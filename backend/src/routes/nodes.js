@@ -271,7 +271,24 @@ router.get('/:id/metrics', async (req, res) => {
     ]);
     
     // Получение системных метрик
-    const systemInfo = await req.systemMonitor.getSystemInfo();
+    let systemMetrics = {};
+    try {
+      const systemInfo = await req.systemMonitor.getSystemInfo();
+      systemMetrics = {
+        cpu_usage: systemInfo?.cpu?.usage || 0,
+        memory_usage: systemInfo?.memory?.usage || 0,
+        disk_usage: systemInfo?.disk?.usage || 0,
+        network: systemInfo?.network || {}
+      };
+    } catch (error) {
+      console.error('❌ Error getting system metrics:', error);
+      systemMetrics = {
+        cpu_usage: 0,
+        memory_usage: 0,
+        disk_usage: 0,
+        network: {}
+      };
+    }
     
     const metrics = {
       node_id: nodeId,
@@ -279,12 +296,7 @@ router.get('/:id/metrics', async (req, res) => {
       timestamp: new Date().toISOString(),
       cli_metrics: cliMetrics,
       db_metrics: dbMetrics,
-      system_metrics: {
-        cpu_usage: systemInfo.cpu.usage,
-        memory_usage: systemInfo.memory.usage,
-        disk_usage: systemInfo.disk.usage,
-        network: systemInfo.network
-      }
+      system_metrics: systemMetrics
     };
     
     res.json({
