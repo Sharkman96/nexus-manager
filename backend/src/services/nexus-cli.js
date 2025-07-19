@@ -33,10 +33,9 @@ class NexusCLI {
    */
   async startNode(proverId, options = {}) {
     try {
-      // Используем реальный Nexus CLI для запуска ноды
-      const command = `${this.cliPath} start --node-id ${proverId}`;
-      console.log(`🚀 Starting node with command: ${command}`);
+      console.log(`🚀 Starting node ${proverId}`);
 
+      // Запускаем ноду с node-id
       const nodeProcess = spawn(this.cliPath, ['start', '--node-id', proverId], {
         stdio: ['pipe', 'pipe', 'pipe'],
         detached: true, // Запускаем в фоновом режиме
@@ -83,8 +82,10 @@ class NexusCLI {
    */
   async stopNode(proverId) {
     try {
+      console.log(`🛑 Stopping node ${proverId}`);
+
+      // Проверяем есть ли запущенный процесс в памяти
       const nodeProcess = this.runningNodes.get(proverId);
-      
       if (nodeProcess) {
         nodeProcess.kill('SIGTERM');
         
@@ -100,26 +101,25 @@ class NexusCLI {
         });
 
         this.runningNodes.delete(proverId);
-        
-        return {
-          success: true,
-          message: 'Node stopped successfully'
-        };
-      } else {
-        // Попытка остановки через CLI
-        const { stdout } = await execAsync(`${this.cliPath} stop --node-id ${proverId}`);
-        return {
-          success: true,
-          message: 'Node stopped via CLI',
-          output: stdout
-        };
+        return { success: true, message: 'Node stopped successfully' };
       }
+
+      // Если процесс не найден в памяти, ищем и убиваем по имени процесса
+      const { exec } = require('child_process');
+      return new Promise((resolve) => {
+        exec(`pkill -f "nexus-cli.*start.*${proverId}"`, (error) => {
+          if (error && error.code !== 1) { // code 1 = no processes found
+            console.error(`❌ Failed to stop node ${proverId}:`, error);
+            resolve({ success: false, error: error.message });
+          } else {
+            resolve({ success: true, message: 'Node stopped successfully' });
+          }
+        });
+      });
+
     } catch (error) {
       console.error(`❌ Failed to stop node ${proverId}:`, error);
-      return {
-        success: false,
-        error: error.message
-      };
+      return { success: false, error: error.message };
     }
   }
 
@@ -128,9 +128,10 @@ class NexusCLI {
    */
   async getNodeStatus(proverId) {
     try {
-      // Проверяем, запущен ли процесс
+      console.log(`🔍 Checking status for node ${proverId}`);
+
+      // Проверяем, запущен ли процесс в памяти
       const nodeProcess = this.runningNodes.get(proverId);
-      
       if (nodeProcess && !nodeProcess.killed) {
         return {
           success: true,
@@ -140,37 +141,42 @@ class NexusCLI {
             tasks_completed: 0,
             nex_points: 0
           },
-          raw_output: 'Node is running'
+          raw_output: 'Node is running (in memory)'
         };
-      } else {
-        // Попробуем получить статус через ps
-        const { stdout } = await execAsync(`ps aux | grep "nexus-cli.*${proverId}" | grep -v grep`);
-        
-        if (stdout.trim()) {
-          return {
-            success: true,
-            status: {
-              status: 'running',
-              uptime: 'active',
-              tasks_completed: 0,
-              nex_points: 0
-            },
-            raw_output: stdout
-          };
-        } else {
-          return {
-            success: true,
-            status: {
-              status: 'stopped',
-              uptime: '0',
-              tasks_completed: 0,
-              nex_points: 0
-            },
-            raw_output: 'Node is not running'
-          };
-        }
       }
+
+      // Проверяем через ps команду
+      const { exec } = require('child_process');
+      return new Promise((resolve) => {
+        exec(`ps aux | grep "nexus-cli.*start.*${proverId}" | grep -v grep`, (error, stdout) => {
+          if (stdout.trim()) {
+            resolve({
+              success: true,
+              status: {
+                status: 'running',
+                uptime: 'active',
+                tasks_completed: 0,
+                nex_points: 0
+              },
+              raw_output: stdout
+            });
+          } else {
+            resolve({
+              success: true,
+              status: {
+                status: 'stopped',
+                uptime: '0',
+                tasks_completed: 0,
+                nex_points: 0
+              },
+              raw_output: 'Node is not running'
+            });
+          }
+        });
+      });
+
     } catch (error) {
+      console.error(`❌ Error checking status for node ${proverId}:`, error);
       return {
         success: false,
         error: error.message,
