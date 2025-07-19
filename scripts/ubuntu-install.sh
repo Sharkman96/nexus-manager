@@ -55,6 +55,10 @@ if [ "$REAL_USER" = "root" ]; then
     REAL_USER="root"
 fi
 
+# Сохраняем исходную директорию в самом начале
+ORIGINAL_DIR=$(pwd)
+print_info "Исходная директория: $ORIGINAL_DIR"
+
 # Информация о пользователе
 if [[ $EUID -eq 0 ]]; then
     print_info "Запуск с правами root"
@@ -293,10 +297,6 @@ EOF
 fi
 
 print_header "Подготовка проекта"
-
-# Сохраняем исходную директорию
-ORIGINAL_DIR=$(pwd)
-print_info "Исходная директория: $ORIGINAL_DIR"
 
 # Проверка что проект уже клонирован
 print_info "Поиск проекта в:"
