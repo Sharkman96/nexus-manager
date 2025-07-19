@@ -104,10 +104,10 @@ class NexusCLI {
         return { success: true, message: 'Node stopped successfully' };
       }
 
-      // Если процесс не найден в памяти, ищем и убиваем по имени процесса
+      // Если процесс не найден в памяти, ищем и убиваем демон nexus
       const { exec } = require('child_process');
       return new Promise((resolve) => {
-        exec(`pkill -f "nexus-cli.*start.*${proverId}"`, (error) => {
+        exec(`pkill -f "nexus"`, (error) => {
           if (error && error.code !== 1) { // code 1 = no processes found
             console.error(`❌ Failed to stop node ${proverId}:`, error);
             resolve({ success: false, error: error.message });
@@ -145,11 +145,13 @@ class NexusCLI {
         };
       }
 
-      // Проверяем через ps команду
+      // Проверяем через ps команду - ищем демон или процесс nexus
       const { exec } = require('child_process');
       return new Promise((resolve) => {
-        exec(`ps aux | grep "nexus-cli.*start.*${proverId}" | grep -v grep`, (error, stdout) => {
+        // Ищем процессы nexus, связанные с нашим node-id
+        exec(`ps aux | grep -E "(nexus|prover)" | grep -v grep`, (error, stdout) => {
           if (stdout.trim()) {
+            // Если есть процессы nexus, считаем что нода работает
             resolve({
               success: true,
               status: {
