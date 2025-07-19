@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Docker, RefreshCw } from 'react-icons/fi';
-import DockerNodeCard from '../components/DockerNodeCard';
-import DockerNodeForm from '../components/DockerNodeForm';
 
 const DockerPage = () => {
   const [nodes, setNodes] = useState([]);
@@ -21,11 +19,12 @@ const DockerPage = () => {
       const data = await response.json();
       
       if (data.success) {
-        setNodes(data.data.nodes);
+        setNodes(data.data.nodes || []);
       } else {
         setError(data.error);
       }
     } catch (error) {
+      console.error('Error fetching nodes:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -36,39 +35,6 @@ const DockerPage = () => {
     setRefreshing(true);
     await fetchNodes();
     setRefreshing(false);
-  };
-
-  const handleCreateNode = (newNode) => {
-    setNodes(prev => [...prev, newNode]);
-    setShowForm(false);
-  };
-
-  const handleUpdateNode = (nodeId, updates) => {
-    setNodes(prev => prev.map(node => 
-      node.id === nodeId ? { ...node, ...updates } : node
-    ));
-  };
-
-  const handleDeleteNode = async (nodeId) => {
-    if (!window.confirm('Are you sure you want to delete this node?')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/docker/nodes/${nodeId}`, {
-        method: 'DELETE',
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setNodes(prev => prev.filter(node => node.id !== nodeId));
-      } else {
-        setError(data.error);
-      }
-    } catch (error) {
-      setError(error.message);
-    }
   };
 
   const dockerNodes = nodes.filter(node => node.node_type === 'docker');
@@ -106,16 +72,7 @@ const DockerPage = () => {
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-red-800">{error}</p>
-        </div>
-      )}
-
-      {showForm && (
-        <div className="mb-8">
-          <DockerNodeForm
-            onSubmit={handleCreateNode}
-            onCancel={() => setShowForm(false)}
-          />
+          <p className="text-red-800">Error: {error}</p>
         </div>
       )}
 
@@ -139,13 +96,48 @@ const DockerPage = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {dockerNodes.map(node => (
-            <DockerNodeCard
-              key={node.id}
-              node={node}
-              onUpdate={handleUpdateNode}
-              onDelete={handleDeleteNode}
-            />
+            <div key={node.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{node.name}</h3>
+              <p className="text-sm text-gray-600 mb-2">Prover ID: {node.prover_id}</p>
+              <p className="text-sm text-gray-600 mb-4">Status: {node.status || 'unknown'}</p>
+              <div className="flex space-x-2">
+                <button className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+                  Start
+                </button>
+                <button className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+                  Stop
+                </button>
+                <button className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700">
+                  Delete
+                </button>
+              </div>
+            </div>
           ))}
+        </div>
+      )}
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Create Docker Node</h2>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-gray-600 mb-4">Docker node creation form will be implemented here.</p>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
