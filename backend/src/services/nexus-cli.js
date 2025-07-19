@@ -128,16 +128,48 @@ class NexusCLI {
    */
   async getNodeStatus(proverId) {
     try {
-      const { stdout } = await execAsync(`${this.cliPath} status --node-id ${proverId}`);
+      // Проверяем, запущен ли процесс
+      const nodeProcess = this.runningNodes.get(proverId);
       
-      // Парсим вывод CLI
-      const status = this.parseStatusOutput(stdout);
-      
-      return {
-        success: true,
-        status: status,
-        raw_output: stdout
-      };
+      if (nodeProcess && !nodeProcess.killed) {
+        return {
+          success: true,
+          status: {
+            status: 'running',
+            uptime: 'active',
+            tasks_completed: 0,
+            nex_points: 0
+          },
+          raw_output: 'Node is running'
+        };
+      } else {
+        // Попробуем получить статус через ps
+        const { stdout } = await execAsync(`ps aux | grep "nexus-cli.*${proverId}" | grep -v grep`);
+        
+        if (stdout.trim()) {
+          return {
+            success: true,
+            status: {
+              status: 'running',
+              uptime: 'active',
+              tasks_completed: 0,
+              nex_points: 0
+            },
+            raw_output: stdout
+          };
+        } else {
+          return {
+            success: true,
+            status: {
+              status: 'stopped',
+              uptime: '0',
+              tasks_completed: 0,
+              nex_points: 0
+            },
+            raw_output: 'Node is not running'
+          };
+        }
+      }
     } catch (error) {
       return {
         success: false,
