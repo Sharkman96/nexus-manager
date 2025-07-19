@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = window.location.origin + '/nexus/api';
+const API_BASE_URL = window.location.origin + '/nexus';
 
 // Создание экземпляра axios с базовой конфигурацией
 const api = axios.create({
